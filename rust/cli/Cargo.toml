@@ -1,0 +1,11 @@
+[package]
+name = "autocipher-cli"
+version = "0.1.4"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autocipher-core.workspace = true
+autocipher-format.workspace = true
+clap.workspace = true
+rpassword.workspace = true

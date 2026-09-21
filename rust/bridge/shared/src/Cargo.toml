@@ -1,0 +1,26 @@
+[package]
+name = "autocipher-bridge"
+description = "The #[ac_fn] definitions: every vault op exposed over the C ABI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# The crate root lives at shared/src/lib.rs (mirrors libsignal's bridge/shared/src).
+path = "lib.rs"
+
+[features]
+default = ["ffi"]
+ffi = []
+dart = []
+jni = []
+node = []
+
+[dependencies]
+autocipher-bridge-macros.workspace = true
+autocipher-bridge-types.workspace = true
+autocipher-core.workspace = true
+autocipher-format.workspace = true
+autocipher-proto.workspace = true
+linkme.workspace = true
+prost.workspace = true

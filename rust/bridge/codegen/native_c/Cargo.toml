@@ -1,0 +1,13 @@
+[package]
+name = "autocipher-bridge-codegen-c"
+description = "Generates the C ABI header (autocipher_capi.h) from the #[ac_fn] definitions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "native_c"
+path = "src/main.rs"
+
+[dependencies]
+autocipher-bridge-codegen.workspace = true

@@ -1,0 +1,19 @@
+[package]
+name = "autocipher-ffi"
+description = "The autocipher C ABI cdylib — every autocipher-bridge export plus the ABI handshake"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# cdylib → libautocipher_ffi.{dll,dylib,so} for dart:ffi; rlib lets the
+# integration tests link and call the ABI directly.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+autocipher-bridge.workspace = true
+autocipher-bridge-types.workspace = true
+
+[dev-dependencies]
+autocipher-proto.workspace = true
+prost.workspace = true

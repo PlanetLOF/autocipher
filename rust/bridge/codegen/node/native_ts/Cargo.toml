@@ -1,0 +1,10 @@
+[package]
+name = "autocipher-bridge-codegen-node"
+description = "Scaffold: future Node (N-API) wrapping. Real bindings land in a later round."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "native_ts"
+path = "src/main.rs"

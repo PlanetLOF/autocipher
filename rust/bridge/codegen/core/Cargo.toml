@@ -1,0 +1,10 @@
+[package]
+name = "autocipher-bridge-codegen"
+description = "Shared helpers for the autocipher bridge codegen runners"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autocipher-bridge.workspace = true
+autocipher-bridge-types.workspace = true

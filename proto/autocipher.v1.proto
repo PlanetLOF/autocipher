@@ -1,0 +1,56 @@
+// autocipher v1 protobuf contract.
+//
+// Single source of truth shared by both sides of the app:
+//   - Rust: rust/proto (prost-build codegen)
+//   - Dart: dart/lib/src/gen (protoc --dart_out, committed)
+//
+// This file models only plaintext *payloads* — the C ABI framing (per-op
+// symbols, opaque handles, error codes, measure/fill buffers) lives in the
+// Rust bridge and is mirrored by the generated C header / Dart bindings. The
+// Rust side encodes and decodes these messages inside individual #[ac_fn] ops
+// (KdfParams in create/changePassword, AddPaths in addPaths, FileInfoList in
+// list, VaultInfo in info), so the two languages can never drift on the
+// protobuf half of the contract.
+
+syntax = "proto3";
+package autocipher.v1;
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  WRONG_PASSWORD = 1;          // key unwrap / header HMAC failure
+  NOT_FOUND = 2;               // file not present
+  ALREADY_EXISTS = 3;
+  CRYPTO = 4;                  // chunk AEAD / integrity failures
+  IO = 5;
+  KDF = 6;
+  METADATA_TOO_LARGE = 7;      // 64 MiB metadata ceiling
+  INVALID_ARGUMENT = 8;
+  INTERNAL = 9;
+}
+
+message KdfParams {
+  enum Memory { M128 = 0; M256 = 1; M512 = 2; }
+  Memory memory = 1;
+  uint32 t = 2;
+  uint32 p = 3;
+}
+
+message FileInfo { string name = 1; uint64 size = 2; }
+message PathItem  { string src = 1; string stored_name = 2; }
+
+message VaultInfo {
+  string path = 1;
+  uint64 generation = 2;
+  KdfParams kdf = 3;
+  uint32 files = 4;
+  uint64 size_bytes = 5;
+  uint64 garbage_bytes = 6;
+  double garbage_ratio = 7;
+  bool header_mirror = 8;
+  bool metadata_mirror = 9;
+}
+
+// ---- op payloads ----------------------------------------------------------
+
+message AddPaths     { repeated PathItem items = 1; }  // addPaths -> count
+message FileInfoList { repeated FileInfo files = 1; }  // list

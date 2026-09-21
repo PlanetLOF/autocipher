@@ -1,0 +1,12 @@
+[package]
+name = "autocipher-bridge-types"
+description = "Type protocol, error table, and metadata slices for the autocipher bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+autocipher-core.workspace = true
+autocipher-format.workspace = true
+autocipher-proto.workspace = true
+linkme.workspace = true

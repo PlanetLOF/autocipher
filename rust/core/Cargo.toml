@@ -1,0 +1,16 @@
+[package]
+name = "autocipher-core"
+version = "0.1.1"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+aes-gcm-siv.workspace = true
+argon2.workspace = true
+hkdf.workspace = true
+hmac.workspace = true
+rand.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+thiserror.workspace = true
+zeroize.workspace = true

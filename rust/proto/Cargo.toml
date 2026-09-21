@@ -1,0 +1,13 @@
+[package]
+name = "autocipher-proto"
+description = "Protobuf contract for autocipher — prost-generated Rust types from proto/autocipher.v1.proto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prost.workspace = true
+
+[build-dependencies]
+prost-build.workspace = true
+protoc-bin-vendored.workspace = true

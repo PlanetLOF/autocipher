@@ -1,0 +1,11 @@
+# Rust build output
+/target
+
+# Dart / Flutter
+**/.dart_tool/
+**/pubspec.lock
+**/build/
+/coverage/
+
+# Staged native libraries (built by script/build_ffi.ps1/.sh)
+/dart/lib/src/native/**

@@ -1,0 +1,49 @@
+[workspace]
+resolver = "3"
+members = [
+  "rust/cli",
+  "rust/core",
+  "rust/format",
+  "rust/proto",
+  "rust/bridge/ffi",
+  "rust/bridge/shared/macros",
+  "rust/bridge/shared/types",
+  "rust/bridge/shared/src",
+  "rust/bridge/codegen/core",
+  "rust/bridge/codegen/native_c",
+  "rust/bridge/codegen/native_dart",
+  "rust/bridge/codegen/jni/native_kt",
+  "rust/bridge/codegen/node/native_ts",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+aes-gcm-siv = "0.12.1"
+argon2 = { version = "0.6.0", features = ["zeroize"] }
+autocipher-bridge = { path = "rust/bridge/shared/src", features = ["ffi"] }
+autocipher-bridge-codegen = { path = "rust/bridge/codegen/core" }
+autocipher-bridge-macros = { path = "rust/bridge/shared/macros" }
+autocipher-bridge-types = { path = "rust/bridge/shared/types" }
+autocipher-core = { path = "rust/core" }
+autocipher-format = { path = "rust/format" }
+autocipher-proto = { path = "rust/proto" }
+clap = { version = "4.5", features = ["derive"] }
+hkdf = "0.13.0"
+hmac = "0.13.0"
+linkme = "0.3"
+proc-macro2 = "1"
+prost = "0.14.4"
+prost-build = "0.14.4"
+protoc-bin-vendored = "3.2.0"
+quote = "1"
+rand = "0.10.2"
+rpassword = "7.3"
+sha2 = "0.11.0"
+subtle = "2.6.0"
+syn = { version = "2", features = ["full", "extra-traits"] }
+thiserror = "2.0.20"
+zeroize = "1.9.0"
