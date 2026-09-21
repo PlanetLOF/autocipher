@@ -1,0 +1,8 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  errors:
+    # Generated bindings use snake_case identifiers mirroring the C ABI and a
+    # PascalCase file name.
+    non_constant_identifier_names: ignore
+    file_names: ignore

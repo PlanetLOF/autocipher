@@ -1,0 +1,17 @@
+{
+  "name": "autocipher",
+  "version": "0.1.0",
+  "description": "Node.js wrapper for the autocipher vault engine (scaffold)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test"
+  },
+  "keywords": ["autocipher", "encryption", "vault"],
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

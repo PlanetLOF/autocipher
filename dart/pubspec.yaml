@@ -1,0 +1,27 @@
+name: autocipher_dart
+description: Pure-Dart bindings for the autocipher vault engine over its C ABI (ffi). No Flutter dependency.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  ffi: ^2.1.0
+  fixnum: ^1.1.1
+  protobuf: ^6.1.0
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0
+
+# When this package is consumed by a Flutter app, declare the native library
+# as an asset so it lands in the app bundle under packages/autocipher_dart/...,
+# where the loader resolves it via Isolate.resolvePackageUri. Only list a file
+# that exists at build time: run script/build_ffi.ps1/.sh first to stage your
+# platform's library (win/macos/linux), and keep the corresponding line below.
+flutter:
+  assets:
+    - lib/src/native/win/autocipher_ffi.dll
+    # - lib/src/native/macos/libautocipher_ffi.dylib   # uncomment on macOS
+    # - lib/src/native/linux/libautocipher_ffi.so      # uncomment on Linux
