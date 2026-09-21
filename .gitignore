@@ -7,5 +7,9 @@
 **/build/
 /coverage/
 
-# Staged native libraries (built by script/build_ffi.ps1/.sh)
+# Staged native libraries (built by script/build_ffi.ps1/.sh). Only the
+# binaries are ignored; the handwritten loader sources (abi.dart, library.dart)
+# must stay tracked — the git dependency of acui needs them.
 /dart/lib/src/native/**
+!/dart/lib/src/native/abi.dart
+!/dart/lib/src/native/library.dart
