@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-codegen-jni"
-description = "Scaffold: future Java wrapping via JNI. Real bindings land in a later round."
 version.workspace = true
 edition.workspace = true
+description = "Scaffold: future Java wrapping via JNI. Real bindings land in a later round."
 license.workspace = true
 
 [[bin]]

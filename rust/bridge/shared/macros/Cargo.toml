@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-macros"
-description = "Proc macros for the autocipher bridge: #[ac_fn] definitions and metadata"
 version.workspace = true
 edition.workspace = true
+description = "Proc macros for the autocipher bridge: #[ac_fn] definitions and metadata"
 license.workspace = true
 
 [lib]

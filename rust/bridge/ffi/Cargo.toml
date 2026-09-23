@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-ffi"
-description = "The autocipher C ABI cdylib — every autocipher-bridge export plus the ABI handshake"
 version.workspace = true
 edition.workspace = true
+description = "The autocipher C ABI cdylib — every autocipher-bridge export plus the ABI handshake"
 license.workspace = true
 
 [lib]

@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-codegen-c"
-description = "Generates the C ABI header (autocipher_capi.h) from the #[ac_fn] definitions"
 version.workspace = true
 edition.workspace = true
+description = "Generates the C ABI header (autocipher_capi.h) from the #[ac_fn] definitions"
 license.workspace = true
 
 [[bin]]

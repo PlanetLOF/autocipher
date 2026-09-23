@@ -1,19 +1,19 @@
 [workspace]
 resolver = "3"
 members = [
+  "rust/bridge/codegen/core",
+  "rust/bridge/codegen/jni/native_kt",
+  "rust/bridge/codegen/native_c",
+  "rust/bridge/codegen/native_dart",
+  "rust/bridge/codegen/node/native_ts",
+  "rust/bridge/ffi",
+  "rust/bridge/shared/macros",
+  "rust/bridge/shared/src",
+  "rust/bridge/shared/types",
   "rust/cli",
   "rust/core",
   "rust/format",
   "rust/proto",
-  "rust/bridge/ffi",
-  "rust/bridge/shared/macros",
-  "rust/bridge/shared/types",
-  "rust/bridge/shared/src",
-  "rust/bridge/codegen/core",
-  "rust/bridge/codegen/native_c",
-  "rust/bridge/codegen/native_dart",
-  "rust/bridge/codegen/jni/native_kt",
-  "rust/bridge/codegen/node/native_ts",
 ]
 
 [workspace.package]
@@ -44,6 +44,6 @@ rand = "0.10.2"
 rpassword = "7.3"
 sha2 = "0.11.0"
 subtle = "2.6.0"
-syn = { version = "2", features = ["full", "extra-traits"] }
+syn = { version = "2", features = ["extra-traits", "full"] }
 thiserror = "2.0.20"
 zeroize = "1.9.0"

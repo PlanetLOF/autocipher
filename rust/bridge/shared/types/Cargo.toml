@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-types"
-description = "Type protocol, error table, and metadata slices for the autocipher bridge"
 version.workspace = true
 edition.workspace = true
+description = "Type protocol, error table, and metadata slices for the autocipher bridge"
 license.workspace = true
 
 [dependencies]

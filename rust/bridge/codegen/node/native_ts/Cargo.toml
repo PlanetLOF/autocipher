@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-codegen-node"
-description = "Scaffold: future Node (N-API) wrapping. Real bindings land in a later round."
 version.workspace = true
 edition.workspace = true
+description = "Scaffold: future Node (N-API) wrapping. Real bindings land in a later round."
 license.workspace = true
 
 [[bin]]

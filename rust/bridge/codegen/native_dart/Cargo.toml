@@ -1,8 +1,8 @@
 [package]
 name = "autocipher-bridge-codegen-dart"
-description = "Generates dart/lib/src/generated/Native.dart from the #[ac_fn] definitions"
 version.workspace = true
 edition.workspace = true
+description = "Generates dart/lib/src/generated/Native.dart from the #[ac_fn] definitions"
 license.workspace = true
 
 [[bin]]

@@ -54,12 +54,18 @@ check-generated:
     cargo test -p autocipher-proto
     cd dart && dart test test/golden_test.dart
 
-# Needs `protoc` and `protoc-gen-dart` on PATH (Rust builds use the vendored
-# protoc; `dart pub global activate protoc_plugin` provides the plugin, put its
-# bin dir on PATH — %LOCALAPPDATA%\Pub\Cache\bin on Windows, ~/.pub-cache/bin
-# on macOS/Linux). `--plugin` is omitted so protoc finds it from PATH on any OS.
+# Regenerate the Dart protobuf types (dart/lib/src/gen). No PATH setup needed:
+# the per-OS script resolves `protoc` (PATH entry, $PROTOC, or the binary
+# vendored by the Rust build via protoc-bin-vendored) and `protoc-gen-dart`
+# (PATH or the pub global install from `dart pub global activate protoc_plugin`).
+regen_proto_dart_script := if os() == "windows" {
+    "pwsh script/regen_proto_dart.ps1"
+} else {
+    "./script/regen_proto_dart.sh"
+}
+
 regen-proto-dart:
-    protoc --dart_out=dart/lib/src/gen --proto_path=proto proto/autocipher.v1.proto
+    {{regen_proto_dart_script}}
 
 fmt:
     cargo fmt --all
