@@ -16,7 +16,7 @@ use autocipher_bridge as _;
 
 /// ABI version, kept in step with `autocipher-ffi::ABI_MAJOR` / `ABI_MINOR`.
 pub const ABI_MAJOR: i32 = 1;
-pub const ABI_MINOR: i32 = 0;
+pub const ABI_MINOR: i32 = 1;
 
 /// All `#[ac_fn]` definitions, sorted by symbol.
 pub fn fn_specs() -> Vec<&'static FnSpec> {
@@ -80,8 +80,14 @@ pub fn write_if_changed(path: &std::path::Path, content: &str) -> std::io::Resul
 pub fn verify(path: &std::path::Path, content: &str) -> Result<(), String> {
     match read_if_exists(path) {
         Some(existing) if existing == content => Ok(()),
-        Some(_) => Err(format!("{} is out of date — regenerate with the codegen runner", path.display())),
-        None => Err(format!("{} is missing — run the codegen runner", path.display())),
+        Some(_) => Err(format!(
+            "{} is out of date — regenerate with the codegen runner",
+            path.display()
+        )),
+        None => Err(format!(
+            "{} is missing — run the codegen runner",
+            path.display()
+        )),
     }
 }
 

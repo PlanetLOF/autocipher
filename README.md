@@ -124,7 +124,15 @@ autocipher create <path.ac>
 
 # With custom KDF parameters (memory in MiB: 128, 256, or 512)
 autocipher create <path.ac> --memory 512 --t 4 --p 4
+
+# Generate a random password instead of prompting
+autocipher create <path.ac> --generate-password
 ```
+
+`--generate-password` (also available on `change-password`) prints a random
+password in the grouped format `XXXXX-XXXXX-XXXXX-XXXXX-XXXXX` (5 groups of 5
+characters, guaranteed to include uppercase, lowercase, digits, and symbols);
+the hyphens are part of the password.
 
 ### Unlock and inspect
 

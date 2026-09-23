@@ -7,13 +7,17 @@
 //!
 //! Usage: `native_c --out <dir> [--verify]`
 
-use autocipher_bridge_codegen::{ABI_MAJOR, ABI_MINOR, c_params, fn_specs, handle_specs, parse_args, verify, write_if_changed};
+use autocipher_bridge_codegen::{
+    ABI_MAJOR, ABI_MINOR, c_params, fn_specs, handle_specs, parse_args, verify, write_if_changed,
+};
 
 fn render() -> String {
     let mut s = String::new();
     s.push_str("/*\n");
     s.push_str(" * GENERATED CODE — DO NOT EDIT. Run: just generate-c\n");
-    s.push_str(" * The authoritative definition set is in rust/bridge/shared/src (the #[ac_fn] list).\n");
+    s.push_str(
+        " * The authoritative definition set is in rust/bridge/shared/src (the #[ac_fn] list).\n",
+    );
     s.push_str(" */\n");
     s.push_str("#pragma once\n");
     s.push_str("#include <stdbool.h>\n#include <stddef.h>\n#include <stdint.h>\n\n");
@@ -59,11 +63,7 @@ fn render() -> String {
             s.push_str(&format!("/* {line} */\n"));
         }
         s.push_str(&format!("/* {kind} */\n"));
-        s.push_str(&format!(
-            "int32_t {}({});\n",
-            spec.symbol,
-            c_params(spec)
-        ));
+        s.push_str(&format!("int32_t {}({});\n", spec.symbol, c_params(spec)));
     }
     s.push_str("\n#ifdef __cplusplus\n}\n#endif\n");
     s

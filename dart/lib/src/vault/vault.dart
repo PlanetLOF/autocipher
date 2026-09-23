@@ -107,8 +107,7 @@ class Vault {
   /// List the vault's plaintext entries (name + size), sorted by name.
   Uint8List _listRaw() {
     _ensureOpen();
-    final (code, data) =
-        Native.bufferCall((out) => Native.list(_handle, out));
+    final (code, data) = Native.bufferCall((out) => Native.list(_handle, out));
     if (code != 0) throw _error(code, null);
     return data;
   }
@@ -121,23 +120,22 @@ class Vault {
   /// Aggregated engine + container statistics.
   Future<VaultInfoModel> info() async {
     _ensureOpen();
-    final (code, data) =
-        Native.bufferCall((out) => Native.info(_handle, out));
+    final (code, data) = Native.bufferCall((out) => Native.info(_handle, out));
     if (code != 0) throw _error(code, null);
     return _fromInfo(VaultInfo.fromBuffer(data));
   }
 
   /// Exact plaintext byte length of `name` (fast, no decryption).
   int size(String name) => Native.withUtf8(name, (np, nl) {
-        final out = calloc<Uint64>();
-        try {
-          final code = Native.size(_handle, np, nl, out);
-          if (code != 0) throw _error(code, null);
-          return out.value;
-        } finally {
-          calloc.free(out);
-        }
-      });
+    final out = calloc<Uint64>();
+    try {
+      final code = Native.size(_handle, np, nl, out);
+      if (code != 0) throw _error(code, null);
+      return out.value;
+    } finally {
+      calloc.free(out);
+    }
+  });
 
   /// Read a raw [len]-byte window starting at `offset`. Returns fewer bytes
   /// (possibly zero) when the window runs past EOF. Prefer [readFile] for
@@ -172,7 +170,8 @@ class Vault {
     final total = files
         .firstWhere(
           (f) => f.name == name,
-          orElse: () => throw NotFoundInVaultException(2, 'no such file: $name'),
+          orElse: () =>
+              throw NotFoundInVaultException(2, 'no such file: $name'),
         )
         .size;
 
@@ -203,8 +202,9 @@ class Vault {
           PathItem(src: it.src, storedName: it.storedName),
       ],
     ).writeToBuffer();
-    final (code, message, count) =
-        await Isolate.run(() => _workerAddPaths(_handleAddress, wire));
+    final (code, message, count) = await Isolate.run(
+      () => _workerAddPaths(_handleAddress, wire),
+    );
     if (code != 0) throw _errorFromWorker(code, message);
     return count;
   }
@@ -212,22 +212,27 @@ class Vault {
   /// Write [data] to `name`, creating it if absent or overwriting in place.
   Future<void> put(String name, Uint8List data) async {
     _ensureOpen();
-    Native.withUtf8(name, (np, nl) => Native.withSlice(data, (dp, dl) {
-      final code = Native.put(_handle, np, nl, dp, dl);
-      if (code != 0) throw _error(code, null);
-      return code;
-    }));
+    Native.withUtf8(
+      name,
+      (np, nl) => Native.withSlice(data, (dp, dl) {
+        final code = Native.put(_handle, np, nl, dp, dl);
+        if (code != 0) throw _error(code, null);
+        return code;
+      }),
+    );
   }
 
   /// Decrypt `name` to the host path `dest` (chunk-streamed in Rust).
   Future<void> extract(String name, String dest) async {
     _ensureOpen();
-    Native.withUtf8(name,
-        (np, nl) => Native.withUtf8(dest, (dp, dl) {
-              final code = Native.extract(_handle, np, nl, dp, dl);
-              if (code != 0) throw _error(code, null);
-              return code;
-            }));
+    Native.withUtf8(
+      name,
+      (np, nl) => Native.withUtf8(dest, (dp, dl) {
+        final code = Native.extract(_handle, np, nl, dp, dl);
+        if (code != 0) throw _error(code, null);
+        return code;
+      }),
+    );
   }
 
   /// Remove `name` from the vault.
@@ -242,12 +247,14 @@ class Vault {
   /// Rename the entry `old` → `new` (preserves the file id / chunk bindings).
   Future<void> rename(String old, String newName) async {
     _ensureOpen();
-    Native.withUtf8(old,
-        (op, ol) => Native.withUtf8(newName, (np, nl) {
-              final code = Native.rename(_handle, op, ol, np, nl);
-              if (code != 0) throw _error(code, null);
-              return code;
-            }));
+    Native.withUtf8(
+      old,
+      (op, ol) => Native.withUtf8(newName, (np, nl) {
+        final code = Native.rename(_handle, op, ol, np, nl);
+        if (code != 0) throw _error(code, null);
+        return code;
+      }),
+    );
   }
 
   // ---- maintenance ----------------------------------------------------------
@@ -268,8 +275,9 @@ class Vault {
   /// Garbage-collect the container. Blocking for large vaults — runs on a
   /// worker isolate.
   Future<void> compact() async {
-    final (code, message) =
-        await Isolate.run(() => _workerCompact(_handleAddress));
+    final (code, message) = await Isolate.run(
+      () => _workerCompact(_handleAddress),
+    );
     if (code != 0) throw _errorFromWorker(code, message);
   }
 
@@ -318,9 +326,16 @@ Future<(int, String?, int)> _workerCreate(
   await ensureNative();
   final handle = calloc<Pointer<Void>>();
   try {
-    final code = Native.withUtf8(path, (pp, pl) =>
-        Native.withUtf8(password, (wp, wl) => Native.withSlice(
-            kdfParams, (kp, kl) => Native.createVault(pp, pl, wp, wl, kp, kl, handle))));
+    final code = Native.withUtf8(
+      path,
+      (pp, pl) => Native.withUtf8(
+        password,
+        (wp, wl) => Native.withSlice(
+          kdfParams,
+          (kp, kl) => Native.createVault(pp, pl, wp, wl, kp, kl, handle),
+        ),
+      ),
+    );
     final address = code == 0 ? handle.value.address : 0;
     return (code, code == 0 ? null : lastError(), address);
   } finally {
@@ -332,8 +347,13 @@ Future<(int, String?, int)> _workerOpen(String path, String password) async {
   await ensureNative();
   final handle = calloc<Pointer<Void>>();
   try {
-    final code = Native.withUtf8(path, (pp, pl) =>
-        Native.withUtf8(password, (wp, wl) => Native.openVault(pp, pl, wp, wl, handle)));
+    final code = Native.withUtf8(
+      path,
+      (pp, pl) => Native.withUtf8(
+        password,
+        (wp, wl) => Native.openVault(pp, pl, wp, wl, handle),
+      ),
+    );
     final address = code == 0 ? handle.value.address : 0;
     return (code, code == 0 ? null : lastError(), address);
   } finally {
@@ -348,17 +368,16 @@ Future<(int, String?)> _workerChangePassword(
 ) async {
   await ensureNative();
   final me = Pointer<Void>.fromAddress(address);
-  return Native.withUtf8(newPassword, (np, nl) => Native.withSlice(
-      kdfParams, (kp, kl) {
-    final code = Native.changePassword(me, np, nl, kp, kl);
-    return (code, code == 0 ? null : lastError());
-  }));
+  return Native.withUtf8(
+    newPassword,
+    (np, nl) => Native.withSlice(kdfParams, (kp, kl) {
+      final code = Native.changePassword(me, np, nl, kp, kl);
+      return (code, code == 0 ? null : lastError());
+    }),
+  );
 }
 
-Future<(int, String?, int)> _workerAddPaths(
-  int address,
-  Uint8List wire,
-) async {
+Future<(int, String?, int)> _workerAddPaths(int address, Uint8List wire) async {
   await ensureNative();
   final me = Pointer<Void>.fromAddress(address);
   final count = calloc<Uint32>();

@@ -9,7 +9,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 const int kAbiMajor = 1;
-const int kAbiMinor = 0;
+const int kAbiMinor = 1;
 
 /// Caller-owned I/O buffer for byte payloads crossing the ABI.
 /// Double-call protocol: pass a buffer; if too small the op returns
@@ -43,6 +43,11 @@ final class Native {
   static void VaultDestroy(Pointer<Void> me) =>
       _lib!.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>(
           'autocipher_vault_destroy')(me);
+
+  /// Generate a cryptographically secure random password as UTF-8 bytes in the grouped XXXXX-XXXXX-XXXXX-XXXXX-XXXXX format.
+  static int generatePassword(Pointer<AcOutBuffer> out) =>
+      _lib!.lookupFunction<Int32 Function(Pointer<AcOutBuffer>), int Function(Pointer<AcOutBuffer> out)>(
+          'autocipher_generate_password')(out);
 
   /// Import files/trees; `items` is an encoded AddPaths protobuf. Returns the number of files added.
   static int addPaths(Pointer<Void> me, Pointer<Uint8> items, int itemsLen, Pointer<Uint32> count) =>

@@ -13,11 +13,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use autocipher_bridge_types::AcOutBuffer;
 use autocipher_ffi::{
-    ac_version, autocipher_error_message, autocipher_vault_add_paths, autocipher_vault_change_password,
-    autocipher_vault_compact, autocipher_vault_create, autocipher_vault_delete,
-    autocipher_vault_destroy, autocipher_vault_extract, autocipher_vault_info, autocipher_vault_list,
-    autocipher_vault_open, autocipher_vault_put, autocipher_vault_read_range,
-    autocipher_vault_remirror, autocipher_vault_rename, autocipher_vault_size,
+    ac_version, autocipher_error_message, autocipher_generate_password, autocipher_vault_add_paths,
+    autocipher_vault_change_password, autocipher_vault_compact, autocipher_vault_create,
+    autocipher_vault_delete, autocipher_vault_destroy, autocipher_vault_extract,
+    autocipher_vault_info, autocipher_vault_list, autocipher_vault_open, autocipher_vault_put,
+    autocipher_vault_read_range, autocipher_vault_remirror, autocipher_vault_rename,
+    autocipher_vault_size,
 };
 use autocipher_proto::v1 as proto;
 use prost::Message;
@@ -207,7 +208,10 @@ fn full_lifecycle_create_add_list_read_put_rename_delete_size_info_compact_chang
     // 8. rename moves the stored name.
     let (op, op_len) = parts("docs/hello.txt");
     let (np, nl) = parts("docs/renamed.txt");
-    assert_eq!(unsafe { autocipher_vault_rename(handle, op, op_len, np, nl) }, 0);
+    assert_eq!(
+        unsafe { autocipher_vault_rename(handle, op, op_len, np, nl) },
+        0
+    );
 
     // 9. reading works under the new name, and size reflects it.
     let (code, data) = read_range(handle, "docs/renamed.txt", 0, 100);
@@ -215,7 +219,10 @@ fn full_lifecycle_create_add_list_read_put_rename_delete_size_info_compact_chang
     assert_eq!(data, b"hello vault, again");
     let mut size: u64 = 0;
     let (np, nl) = parts("docs/renamed.txt");
-    assert_eq!(unsafe { autocipher_vault_size(handle, np, nl, &mut size) }, 0);
+    assert_eq!(
+        unsafe { autocipher_vault_size(handle, np, nl, &mut size) },
+        0
+    );
     assert_eq!(size, b"hello vault, again".len() as u64);
 
     // 10. delete removes it.
@@ -260,7 +267,10 @@ fn full_lifecycle_create_add_list_read_put_rename_delete_size_info_compact_chang
         unsafe { autocipher_vault_extract(handle, named, named_len, dest, dest_len) },
         0
     );
-    assert_eq!(std::fs::read(dir.join("out.bin")).unwrap(), vec![7u8; 64_000]);
+    assert_eq!(
+        std::fs::read(dir.join("out.bin")).unwrap(),
+        vec![7u8; 64_000]
+    );
 
     // 15. destroy scrubs the vault.
     unsafe { autocipher_vault_destroy(handle) };
@@ -299,7 +309,10 @@ fn open_reopen_and_error_paths() {
     assert_eq!(code, proto::ErrorCode::NotFound as i32);
     assert!(data.is_empty());
     let diag = recent_error();
-    assert!(!diag.is_empty(), "engine error produced no diagnostic: {diag:?}");
+    assert!(
+        !diag.is_empty(),
+        "engine error produced no diagnostic: {diag:?}"
+    );
 
     // add_paths with an empty stored name → INVALID_ARGUMENT.
     let (code, _count) = add_paths(handle, &empty_stored(&vault_path));
@@ -368,4 +381,30 @@ fn buffer_protocol_respects_capacity() {
 
     unsafe { autocipher_vault_destroy(handle) };
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn generate_password_returns_grouped_format() {
+    // Free function: no handle, bytes out through the buffer protocol.
+    let (code, data) = with_buffer(|out| unsafe { autocipher_generate_password(out) });
+    assert_eq!(code, 0);
+    let s = String::from_utf8(data).expect("password is UTF-8");
+    assert_eq!(s.len(), 29, "5 groups of 5 chars plus 4 hyphens: {s}");
+    let mut hyphens = 0;
+    for (i, ch) in s.char_indices() {
+        let expected_hyphen = matches!(i, 5 | 11 | 17 | 23);
+        assert_eq!(
+            ch == '-',
+            expected_hyphen,
+            "unexpected char at index {i}: {s}"
+        );
+        if ch == '-' {
+            hyphens += 1;
+        }
+    }
+    assert_eq!(hyphens, 4);
+
+    // A second call produces a different password.
+    let (_, data2) = with_buffer(|out| unsafe { autocipher_generate_password(out) });
+    assert_ne!(s, String::from_utf8(data2).unwrap());
 }

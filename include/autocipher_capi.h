@@ -26,7 +26,7 @@ typedef struct autocipher_out_buffer {
 } autocipher_out_buffer;
 
 #define AUTOCIPHER_ABI_MAJOR 1
-#define AUTOCIPHER_ABI_MINOR 0
+#define AUTOCIPHER_ABI_MINOR 1
 
 /* ABI handshake. */
 int32_t ac_version(int32_t* out_major, int32_t* out_minor, int32_t* out_patch);
@@ -36,6 +36,9 @@ int32_t autocipher_error_message(autocipher_out_buffer* out);
 /* Opaque handle lifecycle. */
 void autocipher_vault_destroy(autocipher_vault* v);
 
+/* Generate a cryptographically secure random password as UTF-8 bytes in the grouped XXXXX-XXXXX-XXXXX-XXXXX-XXXXX format. */
+/* free function */
+int32_t autocipher_generate_password(autocipher_out_buffer* out);
 /* Import files/trees; `items` is an encoded AddPaths protobuf. Returns the number of files added. */
 /* op */
 int32_t autocipher_vault_add_paths(autocipher_vault* me, const uint8_t* items, size_t items_len, uint32_t* count);

@@ -47,9 +47,7 @@ Future<List<String>> bundledCandidates() async {
   final name = nativeLibraryFileName();
   try {
     final uri = await Isolate.resolvePackageUri(
-      Uri.parse(
-        'package:autocipher_dart/lib/src/native/$os/$name',
-      ),
+      Uri.parse('package:autocipher_dart/lib/src/native/$os/$name'),
     );
     if (uri != null && uri.isScheme('file')) {
       candidates.add(Uri.decodeComponent(uri.toFilePath()));
@@ -72,7 +70,8 @@ Future<List<String>> bundledCandidates() async {
   }
   final rel =
       'data/flutter_assets/packages/autocipher_dart/lib/src/native/$os/$name';
-  final rel2 = 'flutter_assets/packages/autocipher_dart/lib/src/native/$os/$name';
+  final rel2 =
+      'flutter_assets/packages/autocipher_dart/lib/src/native/$os/$name';
   for (final base in baseDirs) {
     for (final r in [rel, rel2]) {
       candidates.add(base.resolve(r).toFilePath());

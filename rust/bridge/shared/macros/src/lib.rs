@@ -57,24 +57,37 @@ struct AcFnAttrs {
 
 impl Parse for AcFnAttrs {
     fn parse(input: ParseStream) -> SynResult<Self> {
-        let metas = input.call(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)?;
+        let metas =
+            input.call(syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated)?;
         let mut out = AcFnAttrs::default();
         for meta in metas {
             match meta {
                 Meta::NameValue(nv) => {
                     if nv.path.is_ident("nice") {
-                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = nv.value
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(s),
+                            ..
+                        }) = nv.value
                         {
                             out.nice = Some(s.value());
                         } else {
-                            return Err(syn::Error::new_spanned(nv, "`nice` must be a string literal"));
+                            return Err(syn::Error::new_spanned(
+                                nv,
+                                "`nice` must be a string literal",
+                            ));
                         }
                     } else if nv.path.is_ident("doc") {
-                        if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = nv.value
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(s),
+                            ..
+                        }) = nv.value
                         {
                             out.doc = s.value();
                         } else {
-                            return Err(syn::Error::new_spanned(nv, "`doc` must be a string literal"));
+                            return Err(syn::Error::new_spanned(
+                                nv,
+                                "`doc` must be a string literal",
+                            ));
                         }
                     } else {
                         return Err(syn::Error::new_spanned(nv.path, "unknown `ac_fn` argument"));
@@ -85,7 +98,7 @@ impl Parse for AcFnAttrs {
                     return Err(syn::Error::new_spanned(
                         other,
                         "expected `nice = \"..\"`, `opening`, or `doc = \"..\"`",
-                    ))
+                    ));
                 }
             }
         }
@@ -152,18 +165,27 @@ fn classify(ty: &Type, is_first: bool, is_handle: bool) -> SynResult<(ArgKind, b
                 return Ok((ArgKind::Handle, true));
             }
             if last_seg(elem).is_some_and(|s| s.ident == "Vault") {
-                return Err(syn::Error::new_spanned(ty, "the `Vault` handle must be the first parameter"));
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    "the `Vault` handle must be the first parameter",
+                ));
             }
             if last_seg(elem).is_some_and(|s| s.ident == "str") {
                 return Ok((ArgKind::String, is_handle));
             }
             let Type::Slice(sl) = elem else {
-                return Err(syn::Error::new_spanned(ty, "unsupported ac_fn parameter type"));
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    "unsupported ac_fn parameter type",
+                ));
             };
             if last_seg(&sl.elem).is_some_and(|s| s.ident == "u8") {
                 Ok((ArgKind::BytesIn, is_handle))
             } else {
-                Err(syn::Error::new_spanned(ty, "only `&[u8]` slices are supported"))
+                Err(syn::Error::new_spanned(
+                    ty,
+                    "only `&[u8]` slices are supported",
+                ))
             }
         }
         Type::Path(_) => {
@@ -171,30 +193,43 @@ fn classify(ty: &Type, is_first: bool, is_handle: bool) -> SynResult<(ArgKind, b
             match seg.ident.to_string().as_str() {
                 "u64" => Ok((ArgKind::U64, is_handle)),
                 "u32" => Ok((ArgKind::U32, is_handle)),
-                _ => Err(syn::Error::new_spanned(ty, "unsupported ac_fn parameter type")),
+                _ => Err(syn::Error::new_spanned(
+                    ty,
+                    "unsupported ac_fn parameter type",
+                )),
             }
         }
-        _ => Err(syn::Error::new_spanned(ty, "unsupported ac_fn parameter type")),
+        _ => Err(syn::Error::new_spanned(
+            ty,
+            "unsupported ac_fn parameter type",
+        )),
     }
 }
 
 fn parse_return(rt: &ReturnType) -> SynResult<(Ret, bool /* is_handle via Vault */)> {
     let ReturnType::Type(_, ty) = rt else {
-        return Err(syn::Error::new_spanned(rt, "ac_fn requires a `Result<.., FormatError>` return"));
+        return Err(syn::Error::new_spanned(
+            rt,
+            "ac_fn requires a `Result<.., FormatError>` return",
+        ));
     };
     let path = {
         let Type::Path(p) = &**ty else {
-            return Err(syn::Error::new_spanned(ty, "ac_fn requires a `Result<.., FormatError>` return"));
+            return Err(syn::Error::new_spanned(
+                ty,
+                "ac_fn requires a `Result<.., FormatError>` return",
+            ));
         };
         p
     };
-    let seg = path
-        .path
-        .segments
-        .last()
-        .ok_or_else(|| syn::Error::new_spanned(ty, "ac_fn requires a `Result<.., FormatError>` return"))?;
+    let seg = path.path.segments.last().ok_or_else(|| {
+        syn::Error::new_spanned(ty, "ac_fn requires a `Result<.., FormatError>` return")
+    })?;
     if seg.ident != "Result" {
-        return Err(syn::Error::new_spanned(ty, "ac_fn requires a `Result<.., FormatError>` return"));
+        return Err(syn::Error::new_spanned(
+            ty,
+            "ac_fn requires a `Result<.., FormatError>` return",
+        ));
     }
     let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
         return Err(syn::Error::new_spanned(seg, "malformed `Result` type"));
@@ -226,14 +261,18 @@ fn parse_return(rt: &ReturnType) -> SynResult<(Ret, bool /* is_handle via Vault 
     match ok_ty {
         Type::Tuple(t) if t.elems.is_empty() => Ok((Ret::Unit, false)),
         _ => {
-            let seg = last_seg(ok_ty).ok_or_else(|| syn::Error::new_spanned(&ok_ty, "unsupported ac_fn return type"))?;
+            let seg = last_seg(ok_ty)
+                .ok_or_else(|| syn::Error::new_spanned(&ok_ty, "unsupported ac_fn return type"))?;
             match seg.ident.to_string().as_str() {
                 "u32" => Ok((Ret::U32, false)),
                 "u64" => Ok((Ret::U64, false)),
                 "Vec" => {
                     // Require Vec<u8>.
                     let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
-                        return Err(syn::Error::new_spanned(seg, "unsupported ac_fn return type"));
+                        return Err(syn::Error::new_spanned(
+                            seg,
+                            "unsupported ac_fn return type",
+                        ));
                     };
                     let inner = args
                         .args
@@ -246,10 +285,16 @@ fn parse_return(rt: &ReturnType) -> SynResult<(Ret, bool /* is_handle via Vault 
                     if last_seg(inner).is_some_and(|s| s.ident == "u8") {
                         Ok((Ret::Buffer, false))
                     } else {
-                        Err(syn::Error::new_spanned(seg, "only `Vec<u8>` buffers are supported"))
+                        Err(syn::Error::new_spanned(
+                            seg,
+                            "only `Vec<u8>` buffers are supported",
+                        ))
                     }
                 }
-                _ => Err(syn::Error::new_spanned(&ok_ty, "unsupported ac_fn return type")),
+                _ => Err(syn::Error::new_spanned(
+                    &ok_ty,
+                    "unsupported ac_fn return type",
+                )),
             }
         }
     }
@@ -286,7 +331,10 @@ fn expand_ac_fn(attrs: &AcFnAttrs, func: &ItemFn) -> SynResult<Tokens> {
             return Err(syn::Error::new_spanned(arg, "ac_fn cannot take a receiver"));
         };
         let syn::Pat::Ident(name) = &*pat.pat else {
-            return Err(syn::Error::new_spanned(pat, "ac_fn parameters must be plain identifiers"));
+            return Err(syn::Error::new_spanned(
+                pat,
+                "ac_fn parameters must be plain identifiers",
+            ));
         };
         let (kind, now_handle) = classify(&pat.ty, idx == 0, saw_handle)?;
         is_handle |= now_handle;

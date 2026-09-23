@@ -11,6 +11,7 @@ library;
 export 'src/generated/Native.dart';
 export 'src/native/abi.dart';
 export 'src/native/library.dart';
+export 'src/password.dart';
 export 'src/vault/exceptions.dart';
 export 'src/vault/models.dart';
 export 'src/vault/vault.dart';

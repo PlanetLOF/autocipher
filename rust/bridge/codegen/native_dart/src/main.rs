@@ -4,7 +4,9 @@
 //!
 //! Usage: `native_dart --out <dir> [--verify]`
 
-use autocipher_bridge_codegen::{ABI_MAJOR, ABI_MINOR, fn_specs, handle_specs, parse_args, verify, write_if_changed};
+use autocipher_bridge_codegen::{
+    ABI_MAJOR, ABI_MINOR, fn_specs, handle_specs, parse_args, verify, write_if_changed,
+};
 
 /// Map an ArgSpec/ret tag to (native type, dart type).
 fn types(tag: &str) -> (&'static str, &'static str) {
@@ -26,7 +28,9 @@ fn len_native(_tag: &str) -> &'static str {
 fn render() -> String {
     let mut s = String::new();
     s.push_str("// GENERATED CODE — DO NOT EDIT. Run: just generate-dart\n");
-    s.push_str("// The authoritative definition set is in rust/bridge/shared/src (the #[ac_fn] list).\n\n");
+    s.push_str(
+        "// The authoritative definition set is in rust/bridge/shared/src (the #[ac_fn] list).\n\n",
+    );
     s.push_str("// ignore_for_file: public_member_api_docs, constant_identifier_names\n\n");
     s.push_str("import 'dart:convert';\n");
     s.push_str("import 'dart:ffi';\n");
@@ -65,8 +69,14 @@ fn render() -> String {
 
     // Handles.
     for h in handle_specs() {
-        s.push_str(&format!("  /// Releases an opaque {name} handle (NULL is a no-op).\n", name = h.nice));
-        s.push_str(&format!("  static void {}Destroy(Pointer<Void> me) =>\n", h.nice));
+        s.push_str(&format!(
+            "  /// Releases an opaque {name} handle (NULL is a no-op).\n",
+            name = h.nice
+        ));
+        s.push_str(&format!(
+            "  static void {}Destroy(Pointer<Void> me) =>\n",
+            h.nice
+        ));
         s.push_str(&format!(
             "      _lib!.lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>(\n          '{}')(me);\n\n",
             h.destroy
@@ -96,8 +106,14 @@ fn render() -> String {
             "Unit" => (None, None),
             "U32" => (Some("Pointer<Uint32>"), Some("Pointer<Uint32> count")),
             "U64" => (Some("Pointer<Uint64>"), Some("Pointer<Uint64> out")),
-            "Buffer" => (Some("Pointer<AcOutBuffer>"), Some("Pointer<AcOutBuffer> out")),
-            "Handle" => (Some("Pointer<Pointer<Void>>"), Some("Pointer<Pointer<Void>> outHandle")),
+            "Buffer" => (
+                Some("Pointer<AcOutBuffer>"),
+                Some("Pointer<AcOutBuffer> out"),
+            ),
+            "Handle" => (
+                Some("Pointer<Pointer<Void>>"),
+                Some("Pointer<Pointer<Void>> outHandle"),
+            ),
             other => panic!("unexpected ret {other:?}"),
         };
         if let (Some(n), Some(d)) = (nat_out, dart_out) {
@@ -144,7 +160,9 @@ fn render() -> String {
     s.push_str("        code = call(out);\n");
     s.push_str("        if (code != 0) return (code, Uint8List(0));\n");
     s.push_str("        final len = out.ref.len;\n");
-    s.push_str("        return (0, len == 0 ? Uint8List(0) : Uint8List.fromList(p.asTypedList(len)));\n");
+    s.push_str(
+        "        return (0, len == 0 ? Uint8List(0) : Uint8List.fromList(p.asTypedList(len)));\n",
+    );
     s.push_str("      } finally {\n");
     s.push_str("        calloc.free(p);\n");
     s.push_str("      }\n");
@@ -154,7 +172,9 @@ fn render() -> String {
     s.push_str("  }\n\n");
 
     s.push_str("  /// Run [body] with a NUL-free UTF-8 encoding of [s]; frees after.\n");
-    s.push_str("  static T withUtf8<T>(String s, T Function(Pointer<Uint8> ptr, int len) body) {\n");
+    s.push_str(
+        "  static T withUtf8<T>(String s, T Function(Pointer<Uint8> ptr, int len) body) {\n",
+    );
     s.push_str("    final bytes = utf8.encode(s);\n");
     s.push_str("    if (bytes.isEmpty) return body(nullptr, 0);\n");
     s.push_str("    final p = calloc<Uint8>(bytes.length);\n");
@@ -167,7 +187,9 @@ fn render() -> String {
     s.push_str("  }\n\n");
 
     s.push_str("  /// Run [body] with a copy of [data]; frees after.\n");
-    s.push_str("  static T withSlice<T>(Uint8List data, T Function(Pointer<Uint8> ptr, int len) body) {\n");
+    s.push_str(
+        "  static T withSlice<T>(Uint8List data, T Function(Pointer<Uint8> ptr, int len) body) {\n",
+    );
     s.push_str("    if (data.isEmpty) return body(nullptr, 0);\n");
     s.push_str("    final p = calloc<Uint8>(data.length);\n");
     s.push_str("    try {\n");

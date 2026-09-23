@@ -32,20 +32,19 @@ use std::path::PathBuf;
 
 use autocipher_bridge_macros::ac_fn;
 use autocipher_core::kdf::{KdfParams, Memory};
+use autocipher_core::password::generate_grouped_password;
 use autocipher_format::{FormatError, mirror};
 use autocipher_proto::v1 as proto;
 use prost::Message;
 
-#[cfg(not(any(
-    feature = "ffi",
-    feature = "dart",
-    feature = "jni",
-    feature = "node"
-)))]
+#[cfg(not(any(feature = "ffi", feature = "dart", feature = "jni", feature = "node")))]
 compile_error!("autocipher-bridge requires exactly one target feature: ffi, dart, jni, or node");
 
 #[cfg(any(
-    all(feature = "ffi", any(feature = "dart", feature = "jni", feature = "node")),
+    all(
+        feature = "ffi",
+        any(feature = "dart", feature = "jni", feature = "node")
+    ),
     all(feature = "dart", any(feature = "jni", feature = "node")),
     all(feature = "jni", feature = "node")
 ))]
@@ -56,7 +55,10 @@ pub use autocipher_format::Vault;
 // ---- shared helpers ---------------------------------------------------------
 
 fn io_err(message: &str) -> FormatError {
-    FormatError::Io(std::io::Error::new(std::io::ErrorKind::InvalidInput, message))
+    FormatError::Io(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        message,
+    ))
 }
 
 /// Decode wire `KdfParams` bytes into engine params; rejects unknown memory
@@ -147,14 +149,21 @@ pub unsafe extern "C" fn autocipher_vault_destroy(v: *mut std::ffi::c_void) {
 // ---- constructors --------------------------------------------------------------
 
 /// Create a new empty vault at `path`.
-#[ac_fn(nice = "createVault", doc = "Create a new empty vault at `path` with the given KDF parameters and password.")]
+#[ac_fn(
+    nice = "createVault",
+    doc = "Create a new empty vault at `path` with the given KDF parameters and password."
+)]
 pub fn vault_create(path: &str, password: &[u8], params: &[u8]) -> Result<Vault, FormatError> {
     let params = parse_kdf(params)?;
     Vault::create(path, password, params)
 }
 
 /// Open (or auto-recover, from mirrors) the vault at `path`.
-#[ac_fn(nice = "openVault", opening, doc = "Open the vault at `path` with the given password.")]
+#[ac_fn(
+    nice = "openVault",
+    opening,
+    doc = "Open the vault at `path` with the given password."
+)]
 pub fn vault_open(path: &str, password: &[u8]) -> Result<Vault, FormatError> {
     Vault::open(path, password)
 }
@@ -162,7 +171,10 @@ pub fn vault_open(path: &str, password: &[u8]) -> Result<Vault, FormatError> {
 // ---- queries -------------------------------------------------------------------
 
 /// List stored files. Returns the encoded `FileInfoList` protobuf.
-#[ac_fn(nice = "list", doc = "List the files in the vault as an encoded FileInfoList protobuf.")]
+#[ac_fn(
+    nice = "list",
+    doc = "List the files in the vault as an encoded FileInfoList protobuf."
+)]
 pub fn vault_list(me: &mut Vault) -> Result<Vec<u8>, FormatError> {
     let names = me.list()?;
     let mut files = Vec::with_capacity(names.len());
@@ -174,13 +186,19 @@ pub fn vault_list(me: &mut Vault) -> Result<Vec<u8>, FormatError> {
 }
 
 /// Aggregate vault metadata. Returns the encoded `VaultInfo` protobuf.
-#[ac_fn(nice = "info", doc = "Aggregate vault metadata as an encoded VaultInfo protobuf.")]
+#[ac_fn(
+    nice = "info",
+    doc = "Aggregate vault metadata as an encoded VaultInfo protobuf."
+)]
 pub fn vault_info(me: &mut Vault) -> Result<Vec<u8>, FormatError> {
     Ok(build_vault_info(me)?.encode_to_vec())
 }
 
 /// Uncompressed size of one stored file in bytes.
-#[ac_fn(nice = "size", doc = "Return the uncompressed size in bytes of the named stored file.")]
+#[ac_fn(
+    nice = "size",
+    doc = "Return the uncompressed size in bytes of the named stored file."
+)]
 pub fn vault_size(me: &mut Vault, name: &str) -> Result<u64, FormatError> {
     me.size(name)
 }
@@ -190,7 +208,10 @@ pub fn vault_size(me: &mut Vault, name: &str) -> Result<u64, FormatError> {
 /// Import files (or whole trees). `items` is an encoded `AddPaths` message of
 /// `PathItem { src, stored_name }`. Returns the number of files imported, all
 /// in a single atomic batch.
-#[ac_fn(nice = "addPaths", doc = "Import files/trees; `items` is an encoded AddPaths protobuf. Returns the number of files added.")]
+#[ac_fn(
+    nice = "addPaths",
+    doc = "Import files/trees; `items` is an encoded AddPaths protobuf. Returns the number of files added."
+)]
 pub fn vault_add_paths(me: &mut Vault, items: &[u8]) -> Result<u32, FormatError> {
     let wire = proto::AddPaths::decode(items).map_err(|_| io_err("invalid add_paths payload"))?;
     let items: Vec<(PathBuf, String)> = wire
@@ -203,14 +224,20 @@ pub fn vault_add_paths(me: &mut Vault, items: &[u8]) -> Result<u32, FormatError>
 }
 
 /// Extract one stored file out to the filesystem.
-#[ac_fn(nice = "extract", doc = "Extract the named stored file to `dest` on the filesystem.")]
+#[ac_fn(
+    nice = "extract",
+    doc = "Extract the named stored file to `dest` on the filesystem."
+)]
 pub fn vault_extract(me: &mut Vault, name: &str, dest: &str) -> Result<(), FormatError> {
     me.extract(name, dest)
 }
 
 /// Read a byte range of one stored file; returns the plaintext bytes in a
 /// caller-sized buffer.
-#[ac_fn(nice = "readRange", doc = "Read `len` bytes starting at `offset` from the named stored file.")]
+#[ac_fn(
+    nice = "readRange",
+    doc = "Read `len` bytes starting at `offset` from the named stored file."
+)]
 pub fn vault_read_range(
     me: &mut Vault,
     name: &str,
@@ -222,7 +249,10 @@ pub fn vault_read_range(
 }
 
 /// Write (creating or overwriting) one stored file.
-#[ac_fn(nice = "put", doc = "Write `data` to the named stored file, creating or overwriting it.")]
+#[ac_fn(
+    nice = "put",
+    doc = "Write `data` to the named stored file, creating or overwriting it."
+)]
 pub fn vault_put(me: &mut Vault, name: &str, data: &[u8]) -> Result<(), FormatError> {
     me.put(name, data)
 }
@@ -240,13 +270,19 @@ pub fn vault_rename(me: &mut Vault, old: &str, new_name: &str) -> Result<(), For
 }
 
 /// Rewrite the vault to drop garbage (delta-encoded deleted chunks).
-#[ac_fn(nice = "compact", doc = "Rewrite the vault file to drop garbage space.")]
+#[ac_fn(
+    nice = "compact",
+    doc = "Rewrite the vault file to drop garbage space."
+)]
 pub fn vault_compact(me: &mut Vault) -> Result<(), FormatError> {
     me.compact()
 }
 
 /// Re-wrap the master key under a new password (no data re-encryption).
-#[ac_fn(nice = "changePassword", doc = "Re-wrap the master key under a new password and KDF parameters; `params` is encoded KdfParams.")]
+#[ac_fn(
+    nice = "changePassword",
+    doc = "Re-wrap the master key under a new password and KDF parameters; `params` is encoded KdfParams."
+)]
 pub fn vault_change_password(
     me: &mut Vault,
     new_password: &[u8],
@@ -257,7 +293,21 @@ pub fn vault_change_password(
 }
 
 /// Rewrite the sidecar mirrors from the primary vault file.
-#[ac_fn(nice = "remirror", doc = "Rewrite the sidecar mirrors from the primary vault file.")]
+#[ac_fn(
+    nice = "remirror",
+    doc = "Rewrite the sidecar mirrors from the primary vault file."
+)]
 pub fn vault_remirror(me: &mut Vault) -> Result<(), FormatError> {
     me.remirror()
+}
+
+/// Generate a random password in the grouped `XXXXX-XXXXX-XXXXX-XXXXX-XXXXX`
+/// format (5 groups of 5 characters joined by '-'), guaranteed to contain at
+/// least one uppercase letter, one lowercase letter, one digit, and one symbol.
+#[ac_fn(
+    nice = "generatePassword",
+    doc = "Generate a cryptographically secure random password as UTF-8 bytes in the grouped XXXXX-XXXXX-XXXXX-XXXXX-XXXXX format."
+)]
+pub fn generate_password() -> Result<Vec<u8>, FormatError> {
+    Ok(generate_grouped_password().into_bytes())
 }

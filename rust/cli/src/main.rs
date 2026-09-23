@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use autocipher_core::kdf::Memory;
-use autocipher_core::password::{DEFAULT_PASSWORD_LEN, generate_password};
+use autocipher_core::password::generate_grouped_password;
 use clap::{Parser, Subcommand};
 
 use autocipher_cli::commands;
@@ -124,7 +124,7 @@ fn run(command: Command) -> autocipher_format::Result<()> {
             generate_password: generated,
         } => {
             let password = if generated {
-                let pw = generate_password(DEFAULT_PASSWORD_LEN);
+                let pw = generate_grouped_password();
                 println!("generated password: {pw}");
                 pw.into_bytes()
             } else {
@@ -189,7 +189,7 @@ fn run(command: Command) -> autocipher_format::Result<()> {
             let password = commands::resolve_password("Current password: ")?;
             let mut vault = commands::unlock(&path, &password)?;
             let new_password = if generated {
-                let pw = generate_password(DEFAULT_PASSWORD_LEN);
+                let pw = generate_grouped_password();
                 println!("generated password: {pw}");
                 pw.into_bytes()
             } else {

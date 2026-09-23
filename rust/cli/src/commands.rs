@@ -384,13 +384,17 @@ mod tests {
 
     #[test]
     fn generated_password_create_and_change_roundtrip() {
-        use autocipher_core::password::{DEFAULT_PASSWORD_LEN, generate_password};
+        use autocipher_core::password::generate_grouped_password;
 
         let dir = temp_dir("genpwd");
         let vault_path = dir.join("vault.ac");
 
-        let generated = generate_password(DEFAULT_PASSWORD_LEN);
-        assert!(generated.len() == DEFAULT_PASSWORD_LEN);
+        let generated = generate_grouped_password();
+        // Grouped format: 5 groups of 5 characters joined by '-'.
+        assert_eq!(generated.len(), 29);
+        for (i, ch) in generated.char_indices() {
+            assert_eq!(ch == '-', matches!(i, 5 | 11 | 17 | 23));
+        }
 
         let v = create(&vault_path, generated.as_bytes(), Memory::M128, 1, 1).unwrap();
         drop(v);
@@ -401,7 +405,7 @@ mod tests {
         drop(v);
 
         // Generate a new one for a change-password roundtrip.
-        let new_gen = generate_password(DEFAULT_PASSWORD_LEN);
+        let new_gen = generate_grouped_password();
         let mut v = unlock(&vault_path, generated.as_bytes()).unwrap();
         change_password(&mut v, new_gen.as_bytes(), Memory::M128, 1, 1).unwrap();
         drop(v);

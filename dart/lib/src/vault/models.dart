@@ -18,18 +18,18 @@ class KdfPreset {
   static const kdf512 = KdfPreset(512, 4, 4);
 
   KdfParams toWire() => KdfParams(
-        memory: switch (memoryMiB) {
-          128 => KdfParams_Memory.M128,
-          256 => KdfParams_Memory.M256,
-          512 => KdfParams_Memory.M512,
-          _ => throw InvalidArgumentAutocipherException(
-              8,
-              'unsupported KDF memory preset: $memoryMiB MiB',
-            ),
-        },
-        t: t,
-        p: p,
-      );
+    memory: switch (memoryMiB) {
+      128 => KdfParams_Memory.M128,
+      256 => KdfParams_Memory.M256,
+      512 => KdfParams_Memory.M512,
+      _ => throw InvalidArgumentAutocipherException(
+        8,
+        'unsupported KDF memory preset: $memoryMiB MiB',
+      ),
+    },
+    t: t,
+    p: p,
+  );
 
   @override
   String toString() => '$memoryMiB MiB, t=$t, p=$p';
