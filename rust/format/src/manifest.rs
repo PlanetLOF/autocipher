@@ -9,7 +9,7 @@
 use autocipher_core::content;
 use autocipher_core::subkeys::derive_subkey;
 
-use crate::constants::VERSION;
+use crate::constants::{LEGACY_MANIFEST_VERSION, MANIFEST_VERSION};
 use crate::error::{FormatError, Result};
 use crate::metadata::{MAX_CHUNKS_PER_FILE, MAX_FILES};
 
@@ -26,8 +26,7 @@ pub const MANIFEST_GENERATION: &[u8] = b"";
 /// A single-chunk sealed manifest starts with the 12-byte zero nonce, so its
 /// first four bytes are always `0x00000000`; any non-zero marker is therefore
 /// unambiguous. Chunked payloads are produced only when the serialized manifest
-/// exceeds the single-chunk plaintext limit, so ordinary small vaults are
-/// written byte-for-byte identically to the legacy layout.
+/// exceeds the single-chunk plaintext limit.
 const CHUNKED: u32 = 0x54484E43; // "CNHT" (little-endian)
 
 /// A reference to one sealed chunk in the container's data area.
@@ -52,6 +51,12 @@ pub struct FileMeta {
     pub name_enc: Vec<u8>,
     /// Plaintext file size in bytes.
     pub size: u64,
+    /// Unix timestamp (seconds) when this entry was first stored, or `0` when
+    /// the entry came from a legacy manifest.
+    pub created_at: u64,
+    /// Unix timestamp (seconds) when this entry was last stored, renamed, or
+    /// overwritten, or `0` when unknown.
+    pub modified_at: u64,
     /// Sealed chunks in storage order; `chunk_idx` maps 1:1 to the position.
     pub chunks: Vec<ChunkRef>,
 }
@@ -68,7 +73,7 @@ pub struct VaultManifest {
 impl Default for VaultManifest {
     fn default() -> Self {
         Self {
-            version: VERSION,
+            version: MANIFEST_VERSION,
             files: Vec::new(),
         }
     }
@@ -217,9 +222,9 @@ fn manifest_subkey(master: &[u8]) -> [u8; 32] {
     *subkey
 }
 
-/// Serialize the manifest into a compact binary format.
+/// Serialize the manifest into the current compact binary format.
 ///
-/// Layout (all little-endian):
+/// Layout (all little-endian, version 2):
 /// ```text
 /// u16 LE    version
 /// u64 LE    file_count
@@ -229,21 +234,43 @@ fn manifest_subkey(master: &[u8]) -> [u8; 32] {
 ///   u64 LE  name_enc_len
 ///   [N]     name_enc
 ///   u64 LE  size
+///   u64 LE  created_at (Unix seconds; 0 = unknown)
+///   u64 LE  modified_at (Unix seconds; 0 = unknown)
 ///   u64 LE  chunk_count
 ///   For each ChunkRef:
 ///     u64 LE  offset
 ///     u32 LE  len
 /// ```
+///
+/// Version 1 had no timestamp fields. It is decoded and encoded by
+/// [`serialize_binary`] when `manifest.version` is explicitly
+/// [`LEGACY_MANIFEST_VERSION`], preserving the legacy shape for callers that
+/// need to rewrite an old manifest in place. Newly-created manifests use
+/// version 2.
 pub fn serialize_binary(manifest: &VaultManifest) -> Vec<u8> {
+    let version = if manifest.version == LEGACY_MANIFEST_VERSION {
+        LEGACY_MANIFEST_VERSION
+    } else {
+        MANIFEST_VERSION
+    };
+    let timestamp_bytes = if version == MANIFEST_VERSION { 16 } else { 0 };
     let capacity = 2
         + 8
         + manifest
             .files
             .iter()
-            .map(|f| 8 + f.id.len() + 8 + f.name_enc.len() + 8 + 8 + f.chunks.len() * 12)
+            .map(|f| {
+                8 + f.id.len()
+                    + 8
+                    + f.name_enc.len()
+                    + 8
+                    + timestamp_bytes
+                    + 8
+                    + f.chunks.len() * 12
+            })
             .sum::<usize>();
     let mut buf = Vec::with_capacity(capacity);
-    buf.extend_from_slice(&manifest.version.to_le_bytes());
+    buf.extend_from_slice(&version.to_le_bytes());
     buf.extend_from_slice(&(manifest.files.len() as u64).to_le_bytes());
     for file in &manifest.files {
         buf.extend_from_slice(&(file.id.len() as u64).to_le_bytes());
@@ -251,6 +278,10 @@ pub fn serialize_binary(manifest: &VaultManifest) -> Vec<u8> {
         buf.extend_from_slice(&(file.name_enc.len() as u64).to_le_bytes());
         buf.extend_from_slice(&file.name_enc);
         buf.extend_from_slice(&file.size.to_le_bytes());
+        if version == MANIFEST_VERSION {
+            buf.extend_from_slice(&file.created_at.to_le_bytes());
+            buf.extend_from_slice(&file.modified_at.to_le_bytes());
+        }
         buf.extend_from_slice(&(file.chunks.len() as u64).to_le_bytes());
         for chunk in &file.chunks {
             buf.extend_from_slice(&chunk.offset.to_le_bytes());
@@ -290,6 +321,13 @@ fn parse_binary_inner(mut bytes: &[u8]) -> Result<VaultManifest> {
         });
     }
     let version = u16::from_le_bytes(bytes[..2].try_into().unwrap());
+    if version != LEGACY_MANIFEST_VERSION && version != MANIFEST_VERSION {
+        return Err(FormatError::InvalidLength {
+            what: "manifest version",
+            expected: usize::from(MANIFEST_VERSION),
+            got: usize::from(version),
+        });
+    }
     bytes = &bytes[2..];
 
     let file_count = read_u64(&mut bytes)?;
@@ -318,6 +356,11 @@ fn parse_binary_inner(mut bytes: &[u8]) -> Result<VaultManifest> {
         bytes = &bytes[name_enc_len..];
 
         let size = read_u64(&mut bytes)?;
+        let (created_at, modified_at) = if version == MANIFEST_VERSION {
+            (read_u64(&mut bytes)?, read_u64(&mut bytes)?)
+        } else {
+            (0, 0)
+        };
         let chunk_count = read_u64(&mut bytes)?;
         if chunk_count > MAX_CHUNKS_PER_FILE as u64 {
             return Err(FormatError::ChunkLimitExceeded {
@@ -344,6 +387,8 @@ fn parse_binary_inner(mut bytes: &[u8]) -> Result<VaultManifest> {
             id,
             name_enc,
             size,
+            created_at,
+            modified_at,
             chunks,
         });
     }
@@ -367,18 +412,22 @@ mod tests {
 
     fn sample_manifest() -> VaultManifest {
         VaultManifest {
-            version: VERSION,
+            version: MANIFEST_VERSION,
             files: vec![
                 FileMeta {
                     id: "file-1".into(),
                     name_enc: vec![1u8; 28],
                     size: 0,
+                    created_at: 100,
+                    modified_at: 101,
                     chunks: vec![],
                 },
                 FileMeta {
                     id: "file-2".into(),
                     name_enc: vec![2u8; 28],
                     size: 131_072,
+                    created_at: 200,
+                    modified_at: 202,
                     chunks: vec![
                         ChunkRef {
                             offset: 8192,
@@ -403,6 +452,35 @@ mod tests {
     }
 
     #[test]
+    fn manifest_binary_legacy_v1_defaults_timestamps() {
+        // Version 1 had no timestamps between `size` and `chunk_count`.
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&LEGACY_MANIFEST_VERSION.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&6u64.to_le_bytes());
+        bytes.extend_from_slice(b"file-1");
+        bytes.extend_from_slice(&3u64.to_le_bytes());
+        bytes.extend_from_slice(&[1, 2, 3]);
+        bytes.extend_from_slice(&42u64.to_le_bytes());
+        bytes.extend_from_slice(&1u64.to_le_bytes());
+        bytes.extend_from_slice(&8192u64.to_le_bytes());
+        bytes.extend_from_slice(&70u32.to_le_bytes());
+
+        let parsed = parse_binary(&bytes).unwrap();
+        assert_eq!(parsed.version, LEGACY_MANIFEST_VERSION);
+        assert_eq!(parsed.files[0].created_at, 0);
+        assert_eq!(parsed.files[0].modified_at, 0);
+
+        // A caller may hold a legacy manifest in memory while adding metadata.
+        // Explicitly retaining its v1 shape must not accidentally emit v2
+        // timestamp fields, and a round-trip must remain byte-for-byte stable.
+        let mut legacy = parsed.clone();
+        legacy.files[0].created_at = 7;
+        legacy.files[0].modified_at = 9;
+        assert_eq!(serialize_binary(&legacy), bytes);
+    }
+
+    #[test]
     fn manifest_binary_empty() {
         let m = VaultManifest::default();
         let bin = serialize_binary(&m);
@@ -413,12 +491,14 @@ mod tests {
     #[test]
     fn manifest_binary_large_roundtrip() {
         let m = VaultManifest {
-            version: VERSION,
+            version: MANIFEST_VERSION,
             files: (0..80_000)
                 .map(|i| FileMeta {
                     id: format!("file-{i:06}"),
                     name_enc: vec![(i % 251) as u8; 28],
                     size: 1 << 20,
+                    created_at: i as u64 + 1_000,
+                    modified_at: i as u64 + 2_000,
                     chunks: vec![
                         ChunkRef {
                             offset: i as u64 * 65564,
@@ -457,12 +537,14 @@ mod tests {
     #[test]
     fn manifest_large_chunked_roundtrip() {
         let m = VaultManifest {
-            version: VERSION,
+            version: MANIFEST_VERSION,
             files: (0..500_000)
                 .map(|i| FileMeta {
                     id: format!("file-{i:06}"),
                     name_enc: vec![(i % 251) as u8; 28],
                     size: 1 << 20,
+                    created_at: i as u64 + 1_000,
+                    modified_at: i as u64 + 2_000,
                     chunks: vec![ChunkRef {
                         offset: i as u64 * 70_000,
                         len: 70_004,

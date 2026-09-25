@@ -35,7 +35,17 @@ message KdfParams {
   uint32 p = 3;
 }
 
-message FileInfo { string name = 1; uint64 size = 2; }
+message FileInfo {
+  string name = 1;
+  uint64 size = 2;
+  // Vault-operation Unix timestamps in seconds; zero means unknown. These do
+  // not mirror source-filesystem timestamps.
+  uint64 created_at = 3;
+  uint64 modified_at = 4;
+  // Sum of encrypted chunk lengths referenced by this file. This is logical
+  // storage accounting and can survive structural recovery of metadata.
+  uint64 storage_used = 5;
+}
 message PathItem  { string src = 1; string stored_name = 2; }
 
 message VaultInfo {

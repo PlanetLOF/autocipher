@@ -47,10 +47,16 @@ mod tests {
                 proto::FileInfo {
                     name: "photos/DSC0001.jpg".to_string(),
                     size: 1_048_576,
+                    created_at: 10,
+                    modified_at: 20,
+                    storage_used: 30,
                 },
                 proto::FileInfo {
                     name: "doc.txt".to_string(),
                     size: 42,
+                    created_at: 40,
+                    modified_at: 50,
+                    storage_used: 60,
                 },
             ],
         }
@@ -69,8 +75,7 @@ mod tests {
     /// messages to identical bytes; the literals below are the locked parity
     /// check.
     const GOLDEN_ADD_PATHS_HEX: &str = "0a2d0a17433a5c55736572735c6d655c445343303030312e6a7067121270686f746f732f445343303030312e6a70670a1b0a102f686f6d652f6d652f646f632e7478741207646f632e747874";
-    const GOLDEN_FILE_LIST_HEX: &str =
-        "0a180a1270686f746f732f445343303030312e6a7067108080400a0b0a07646f632e747874102a";
+    const GOLDEN_FILE_LIST_HEX: &str = "0a1e0a1270686f746f732f445343303030312e6a706710808040180a2014281e0a110a07646f632e747874102a18282032283c";
     const GOLDEN_KDF_HEX: &str = "080110041804";
 
     #[test]

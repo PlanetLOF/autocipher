@@ -193,6 +193,9 @@ fn full_lifecycle_create_add_list_read_put_rename_delete_size_info_compact_chang
     assert_eq!(files.files.len(), 1);
     assert_eq!(&files.files[0].name, "docs/hello.txt");
     assert_eq!(files.files[0].size, 11);
+    assert!(files.files[0].created_at > 0);
+    assert_eq!(files.files[0].created_at, files.files[0].modified_at);
+    assert!(files.files[0].storage_used > files.files[0].size);
 
     // 6. read_range of the whole file returns the plaintext.
     let (code, data) = read_range(handle, "docs/hello.txt", 0, 100);

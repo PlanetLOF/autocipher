@@ -11,16 +11,15 @@ import 'package:ffi/ffi.dart';
 import '../generated/Native.dart';
 import 'library.dart';
 
-/// Ensure the native library is loaded on this isolate (idempotent).
-Future<void> ensureNative() async {
+bool _abiChecked = false;
+
+Future<void> _loadNative() async {
   if (!Native.isLoaded) {
     Native.use(await openAutocipher());
   }
 }
 
-/// The native ABI version triple `(major, minor, patch)` from `ac_version`.
-Future<(int, int, int)> nativeVersion() async {
-  await ensureNative();
+(int, int, int) _readNativeVersion() {
   final major = calloc<Int32>();
   final minor = calloc<Int32>();
   final patch = calloc<Int32>();
@@ -34,16 +33,37 @@ Future<(int, int, int)> nativeVersion() async {
   }
 }
 
-/// Throws when the native library reports an ABI major that differs from the
-/// one this package was generated for.
-Future<void> ensureAbiCompatible() async {
-  final (major, minor, _) = await nativeVersion();
-  if (major != kAbiMajor) {
+/// Ensure the native library is loaded and its ABI is compatible on this
+/// isolate. The check is performed once per isolate and applies to every
+/// operation that calls this helper.
+Future<void> ensureNative() async {
+  await _loadNative();
+  if (_abiChecked) return;
+  final (major, minor, _) = _readNativeVersion();
+  if (major != kAbiMajor || minor < kAbiMinor) {
     throw AutocipherLibraryException(
-      'ABI major mismatch: native reports $major.$minor, Dart expects '
-      '$kAbiMajor.$kAbiMinor — rebuild both sides.',
+      'ABI version mismatch: native reports $major.$minor, Dart expects '
+      '$kAbiMajor.$kAbiMinor or newer within the same major — rebuild both '
+      'sides.',
     );
   }
+  _abiChecked = true;
+}
+
+/// The native ABI version triple `(major, minor, patch)` from `ac_version`.
+///
+/// This diagnostic helper loads the library but does not apply the
+/// compatibility check; callers that need the check should await
+/// [ensureAbiCompatible] or use [ensureNative].
+Future<(int, int, int)> nativeVersion() async {
+  await _loadNative();
+  return _readNativeVersion();
+}
+
+/// Throws when the native library is older than the ABI this package was
+/// generated for. A newer same-major native library remains compatible.
+Future<void> ensureAbiCompatible() async {
+  await ensureNative();
 }
 
 /// Diagnostic text recorded by the most recent failed op, or `null` if the

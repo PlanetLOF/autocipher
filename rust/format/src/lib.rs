@@ -28,6 +28,7 @@
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rand::Rng;
 use zeroize::Zeroizing;
@@ -68,6 +69,25 @@ const FILENAME_PURPOSE: &[u8] = b"filename";
 
 /// Domain tag bound into encrypted file names (also used by autocipher-core).
 const NAME_AAD: &[u8] = b"autocipher:filename:v1";
+
+/// Plaintext metadata for one file in a vault listing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoredFileInfo {
+    /// Decrypted stored name, including any folder prefixes.
+    pub name: String,
+    /// Plaintext file size in bytes.
+    pub size: u64,
+    /// Vault-operation creation timestamp in seconds; `0` means unknown.
+    pub created_at: u64,
+    /// Vault-operation modification timestamp in seconds; `0` means unknown.
+    pub modified_at: u64,
+    /// Sum of the sealed chunk lengths referenced by this file.
+    ///
+    /// This is logical encrypted-storage accounting. A structural recovery can
+    /// retain these references even when the primary content bytes are not
+    /// available for extraction.
+    pub storage_used: u64,
+}
 
 /// The public `.ac` vault handle.
 ///
@@ -313,18 +333,42 @@ impl Vault {
 
     /// Decrypt and list the plaintext file names currently stored in the vault.
     pub fn list(&self) -> Result<Vec<String>> {
-        let mut names = Vec::with_capacity(self.manifest.files.len());
-        for meta in &self.manifest.files {
-            let dec = self
-                .name_key
-                .decrypt_name(&meta.name_enc, NAME_AAD)
-                .map_err(FormatError::Crypto)?;
-            let name = String::from_utf8(dec.to_vec()).map_err(|e| {
-                FormatError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-            })?;
-            names.push(name);
-        }
-        Ok(names)
+        Ok(self
+            .list_file_info()?
+            .into_iter()
+            .map(|info| info.name)
+            .collect())
+    }
+
+    /// List file metadata, including native vault-operation timestamps and
+    /// encrypted storage use.
+    ///
+    /// `storage_used` is the sum of the sealed chunk lengths referenced by the
+    /// file; it excludes the manifest and integrity-store overhead. It remains
+    /// a logical metadata value after structural recovery when the original
+    /// content bytes are unavailable. Timestamps are Unix seconds and remain
+    /// `0` for entries loaded from legacy manifests.
+    pub fn list_file_info(&self) -> Result<Vec<StoredFileInfo>> {
+        self.manifest
+            .files
+            .iter()
+            .map(|meta| {
+                let dec = self
+                    .name_key
+                    .decrypt_name(&meta.name_enc, NAME_AAD)
+                    .map_err(FormatError::Crypto)?;
+                let name = String::from_utf8(dec.to_vec()).map_err(|e| {
+                    FormatError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                })?;
+                Ok(StoredFileInfo {
+                    name,
+                    size: meta.size,
+                    created_at: meta.created_at,
+                    modified_at: meta.modified_at,
+                    storage_used: meta.chunks.iter().map(|chunk| u64::from(chunk.len)).sum(),
+                })
+            })
+            .collect()
     }
 
     /// Encrypt and add the plaintext file at `src` to the vault under its base
@@ -367,6 +411,7 @@ impl Vault {
         let src = src.as_ref().to_path_buf();
 
         let size = std::fs::metadata(&src)?.len();
+        let now = now_unix_seconds();
         let id = new_file_id();
         let name_enc = self
             .name_key
@@ -378,6 +423,8 @@ impl Vault {
             id,
             name_enc,
             size,
+            created_at: now,
+            modified_at: now,
             src: FileSource::Path(src),
         });
         self.commit_plan(plan)
@@ -398,6 +445,7 @@ impl Vault {
     /// duplicating entries. Returns the number of items added or overwritten.
     pub fn add_paths(&mut self, items: &[(std::path::PathBuf, String)]) -> Result<usize> {
         let mut plan = self.surviving_plan();
+        let now = now_unix_seconds();
         let mut added = 0usize;
         for (src, name) in items {
             if name.is_empty() {
@@ -413,6 +461,7 @@ impl Vault {
             {
                 Some(p) => {
                     p.size = size;
+                    p.modified_at = now;
                     p.src = FileSource::Path(src.clone());
                 }
                 None => {
@@ -425,6 +474,8 @@ impl Vault {
                         id,
                         name_enc,
                         size,
+                        created_at: now,
+                        modified_at: now,
                         src: FileSource::Path(src.clone()),
                     });
                 }
@@ -543,12 +594,14 @@ impl Vault {
     /// durably persist the container.
     pub fn put(&mut self, name: &str, data: &[u8]) -> Result<()> {
         let mut plan = self.surviving_plan();
+        let now = now_unix_seconds();
         match plan
             .iter_mut()
             .find(|p| self.name_equals(&p.name_enc, name))
         {
             Some(p) => {
                 p.size = data.len() as u64;
+                p.modified_at = now;
                 p.src = FileSource::Bytes(data.to_vec());
             }
             None => {
@@ -561,6 +614,8 @@ impl Vault {
                     id,
                     name_enc,
                     size: data.len() as u64,
+                    created_at: now,
+                    modified_at: now,
                     src: FileSource::Bytes(data.to_vec()),
                 });
             }
@@ -580,6 +635,8 @@ impl Vault {
                 id: meta.id.clone(),
                 name_enc: meta.name_enc.clone(),
                 size: meta.size,
+                created_at: meta.created_at,
+                modified_at: meta.modified_at,
                 src: FileSource::Container {
                     chunks: meta.chunks.clone(),
                 },
@@ -601,11 +658,13 @@ impl Vault {
             .encrypt_name(new.as_bytes(), NAME_AAD)
             .map_err(FormatError::Crypto)?;
 
+        let now = now_unix_seconds();
         let mut plan = self.surviving_plan();
         let mut found = false;
         for p in plan.iter_mut() {
             if self.name_equals(&p.name_enc, old) {
                 p.name_enc = name_enc.clone();
+                p.modified_at = now;
                 found = true;
                 break;
             }
@@ -799,6 +858,8 @@ impl Vault {
                 id: meta.id.clone(),
                 name_enc: meta.name_enc.clone(),
                 size: meta.size,
+                created_at: meta.created_at,
+                modified_at: meta.modified_at,
                 src: FileSource::Container {
                     chunks: meta.chunks.clone(),
                 },
@@ -848,6 +909,10 @@ impl Vault {
         // plaintext sizes; survivor refs are reused verbatim from the old
         // manifest. The unified metadata is appended after the new data, so its
         // length does not feed back into any chunk offset: no fixed-point loop.
+        // A normal mutation upgrades a legacy v1 manifest to the current v2
+        // shape so new and changed entries can carry timestamps. Operations
+        // that leave metadata bytes untouched (for example password changes)
+        // preserve the original manifest version.
         let mut new_manifest = VaultManifest::default();
         let mut new_store = IntegrityBlockStore::new(generation);
         let mut offset = append_off;
@@ -873,6 +938,8 @@ impl Vault {
                 id: f.id.clone(),
                 name_enc: f.name_enc.clone(),
                 size: f.size,
+                created_at: f.created_at,
+                modified_at: f.modified_at,
                 chunks: refs,
             });
         }
@@ -1109,6 +1176,8 @@ struct PlannedFile {
     id: String,
     name_enc: Vec<u8>,
     size: u64,
+    created_at: u64,
+    modified_at: u64,
     src: FileSource,
 }
 
@@ -1132,6 +1201,15 @@ fn name_key_from_master(master: &[u8]) -> NameKey {
             .try_into()
             .expect("derive_subkey always returns a 32-byte subkey"),
     )
+}
+
+/// Current Unix timestamp in seconds, with `0` used when the system clock is
+/// before the Unix epoch.
+fn now_unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
 }
 
 /// Generate a fresh random file id, hex-encoded.
@@ -1332,6 +1410,8 @@ fn plan_layout(
     base_off: u64,
 ) -> Result<(Vec<u8>, VaultManifest, IntegrityBlockStore, u64)> {
     let mut data_off = base_off;
+    // Compaction is a metadata rewrite, so it intentionally upgrades a legacy
+    // v1 manifest to the current timestamp-bearing format.
     let mut manifest = VaultManifest::default();
     let mut store = IntegrityBlockStore::new(generation);
     let mut metadata = Vec::new();
@@ -1352,6 +1432,8 @@ fn plan_layout(
                 id: f.id.clone(),
                 name_enc: f.name_enc.clone(),
                 size: f.size,
+                created_at: f.created_at,
+                modified_at: f.modified_at,
                 chunks: refs,
             });
         }
@@ -1546,6 +1628,78 @@ mod tests {
     }
 
     #[test]
+    fn metadata_survives_overwrite_rename_reopen_and_compaction() {
+        let dir = temp_dir("metadata");
+        let vault_path = dir.join("vault.ac");
+        let initial_size = autocipher_core::content::CHUNK_SIZE as usize + 1;
+        let initial = vec![0x5a; initial_size];
+
+        let mut v = Vault::create(&vault_path, PASSWORD, params()).unwrap();
+        v.set_auto_compact_ratio(None);
+        v.put("docs/blob.bin", &initial).unwrap();
+
+        let first = v
+            .list_file_info()
+            .unwrap()
+            .into_iter()
+            .next()
+            .expect("new entry should be listed");
+        assert_eq!(first.name, "docs/blob.bin");
+        assert_eq!(first.size, initial_size as u64);
+        assert!(first.created_at > 0);
+        assert_eq!(first.created_at, first.modified_at);
+        assert_eq!(
+            first.storage_used,
+            u64::from(sealed_chunk_len(initial_size as u64, 0))
+                + u64::from(sealed_chunk_len(initial_size as u64, 1)),
+        );
+
+        drop(v);
+        let mut v = Vault::open(&vault_path, PASSWORD).unwrap();
+        v.set_auto_compact_ratio(None);
+        let reopened = v.list_file_info().unwrap().pop().unwrap();
+        assert_eq!(reopened, first);
+
+        // Overwriting keeps the creation timestamp and refreshes modification.
+        v.put("docs/blob.bin", b"small").unwrap();
+        let overwritten = v
+            .list_file_info()
+            .unwrap()
+            .into_iter()
+            .find(|info| info.name == "docs/blob.bin")
+            .unwrap();
+        assert_eq!(overwritten.created_at, first.created_at);
+        assert!(overwritten.modified_at >= first.modified_at);
+        assert_eq!(overwritten.size, 5);
+        assert_eq!(overwritten.storage_used, u64::from(sealed_chunk_len(5, 0)),);
+
+        // A rename keeps the creation timestamp and advances modification again.
+        v.rename("docs/blob.bin", "docs/renamed.bin").unwrap();
+        let renamed = v
+            .list_file_info()
+            .unwrap()
+            .into_iter()
+            .find(|info| info.name == "docs/renamed.bin")
+            .unwrap();
+        assert_eq!(renamed.created_at, first.created_at);
+        assert!(renamed.modified_at >= overwritten.modified_at);
+        assert_eq!(renamed.size, overwritten.size);
+        assert_eq!(renamed.storage_used, overwritten.storage_used);
+
+        v.compact().unwrap();
+        drop(v);
+        let after_compact = Vault::open(&vault_path, PASSWORD)
+            .unwrap()
+            .list_file_info()
+            .unwrap()
+            .pop()
+            .unwrap();
+        assert_eq!(after_compact, renamed);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn add_file_as_stores_under_explicit_subpath() {
         let dir = temp_dir("addfileas");
         let vault_path = dir.join("vault.ac");
@@ -1704,6 +1858,8 @@ mod tests {
                 id: id.clone(),
                 name_enc: vec![(i % 251) as u8; 40],
                 size: 1 << 20,
+                created_at: i as u64 + 1_000,
+                modified_at: i as u64 + 2_000,
                 chunks: vec![ChunkRef {
                     offset: i as u64 * 70_000,
                     len: 70_004,

@@ -176,12 +176,17 @@ pub fn vault_open(path: &str, password: &[u8]) -> Result<Vault, FormatError> {
     doc = "List the files in the vault as an encoded FileInfoList protobuf."
 )]
 pub fn vault_list(me: &mut Vault) -> Result<Vec<u8>, FormatError> {
-    let names = me.list()?;
-    let mut files = Vec::with_capacity(names.len());
-    for name in names {
-        let size = me.size(&name)?;
-        files.push(proto::FileInfo { name, size });
-    }
+    let files = me
+        .list_file_info()?
+        .into_iter()
+        .map(|info| proto::FileInfo {
+            name: info.name,
+            size: info.size,
+            created_at: info.created_at,
+            modified_at: info.modified_at,
+            storage_used: info.storage_used,
+        })
+        .collect();
     Ok(proto::FileInfoList { files }.encode_to_vec())
 }
 

@@ -79,12 +79,17 @@ const FileInfo$json = {
   '2': [
     {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
     {'1': 'size', '3': 2, '4': 1, '5': 4, '10': 'size'},
+    {'1': 'created_at', '3': 3, '4': 1, '5': 4, '10': 'createdAt'},
+    {'1': 'modified_at', '3': 4, '4': 1, '5': 4, '10': 'modifiedAt'},
+    {'1': 'storage_used', '3': 5, '4': 1, '5': 4, '10': 'storageUsed'},
   ],
 };
 
 /// Descriptor for `FileInfo`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List fileInfoDescriptor = $convert.base64Decode(
-    'CghGaWxlSW5mbxISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHNpemUYAiABKARSBHNpemU=');
+    'CghGaWxlSW5mbxISCgRuYW1lGAEgASgJUgRuYW1lEhIKBHNpemUYAiABKARSBHNpemUSHQoKY3'
+    'JlYXRlZF9hdBgDIAEoBFIJY3JlYXRlZEF0Eh8KC21vZGlmaWVkX2F0GAQgASgEUgptb2RpZmll'
+    'ZEF0EiEKDHN0b3JhZ2VfdXNlZBgFIAEoBFILc3RvcmFnZVVzZWQ=');
 
 @$core.Deprecated('Use pathItemDescriptor instead')
 const PathItem$json = {

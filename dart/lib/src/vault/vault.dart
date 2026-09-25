@@ -104,7 +104,7 @@ class Vault {
 
   // ---- reading --------------------------------------------------------------
 
-  /// List the vault's plaintext entries (name + size), sorted by name.
+  /// List the vault's plaintext entries and per-file metadata.
   Uint8List _listRaw() {
     _ensureOpen();
     final (code, data) = Native.bufferCall((out) => Native.list(_handle, out));
@@ -114,7 +114,16 @@ class Vault {
 
   Future<List<VaultFileInfo>> listFiles() async {
     final files = FileInfoList.fromBuffer(_listRaw()).files;
-    return [for (final f in files) VaultFileInfo(f.name, f.size.toInt())];
+    return [
+      for (final f in files)
+        VaultFileInfo(
+          f.name,
+          f.size.toInt(),
+          createdAt: f.createdAt.toInt(),
+          modifiedAt: f.modifiedAt.toInt(),
+          storageUsed: f.storageUsed.toInt(),
+        ),
+    ];
   }
 
   /// Aggregated engine + container statistics.

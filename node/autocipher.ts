@@ -11,7 +11,7 @@
 
 export const ABI = {
   major: 1,
-  minor: 0,
+  minor: 2,
 } as const;
 
 /** The stable surface the binding will expose once generated. */
@@ -28,4 +28,10 @@ export type KdfPreset = { memoryMiB: 128 | 256 | 512; t: number; p: number };
 export interface FileInfo {
   name: string;
   sizeBytes: number;
+  /** Unix seconds; 0 means unknown. */
+  createdAt: number;
+  /** Unix seconds; 0 means unknown. */
+  modifiedAt: number;
+  /** Sealed content bytes occupied by the entry. */
+  storageUsed: number;
 }

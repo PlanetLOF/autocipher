@@ -18,14 +18,14 @@ final _libOverride = Platform.environment['AUTOCIPHER_FFI_LIB'];
 bool _isSkipped() => _libOverride == null || !File(_libOverride!).existsSync();
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     if (_isSkipped()) {
       markTestSkipped(
         'No native library configured; set AUTOCIPHER_FFI_LIB to the built '
         'autocipher_ffi.dll (release) to run the live lifecycle test.',
       );
     } else {
-      ensureAbiCompatible();
+      await ensureAbiCompatible();
     }
   });
 
@@ -59,6 +59,10 @@ void main() {
     // list + size
     var files = await vault.listFiles();
     expect(files.any((f) => f.name == 'stuff/notes.txt'), isTrue);
+    final imported = files.singleWhere((f) => f.name == 'stuff/notes.txt');
+    expect(imported.createdAt, greaterThan(0));
+    expect(imported.modifiedAt, imported.createdAt);
+    expect(imported.storageUsed, greaterThan(imported.size));
 
     // put + readRange round-trip
     final blob = Uint8List.fromList(List.generate(1000, (i) => i % 251));
@@ -103,6 +107,15 @@ void main() {
     addTearDown(() => reopened.close());
     final back = await reopened.readRange('renamed.bin', offset: 0, len: 1000);
     expect(back, equals(blob));
+    final reopenedEntry = (await reopened.listFiles()).singleWhere(
+      (f) => f.name == 'renamed.bin',
+    );
+    expect(reopenedEntry.createdAt, greaterThan(0));
+    expect(
+      reopenedEntry.modifiedAt,
+      greaterThanOrEqualTo(reopenedEntry.createdAt),
+    );
+    expect(reopenedEntry.storageUsed, greaterThan(reopenedEntry.size));
 
     // delete
     await reopened.delete('renamed.bin');

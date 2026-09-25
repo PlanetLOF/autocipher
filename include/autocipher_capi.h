@@ -26,7 +26,7 @@ typedef struct autocipher_out_buffer {
 } autocipher_out_buffer;
 
 #define AUTOCIPHER_ABI_MAJOR 1
-#define AUTOCIPHER_ABI_MINOR 1
+#define AUTOCIPHER_ABI_MINOR 2
 
 /* ABI handshake. */
 int32_t ac_version(int32_t* out_major, int32_t* out_minor, int32_t* out_patch);

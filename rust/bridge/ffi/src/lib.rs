@@ -30,7 +30,7 @@ pub use autocipher_bridge::*;
 /// ABI major version; bump on breaking wire/symbol changes.
 pub const ABI_MAJOR: i32 = 1;
 /// ABI minor version; bump on additive, backward-compatible changes.
-pub const ABI_MINOR: i32 = 1;
+pub const ABI_MINOR: i32 = 2;
 
 /// `int32 ac_version(int32* out_major, int32* out_minor, int32* out_patch)`
 ///

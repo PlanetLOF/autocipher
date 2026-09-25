@@ -10,7 +10,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 const int kAbiMajor = 1;
-const int kAbiMinor = 1;
+const int kAbiMinor = 2;
 
 /// Caller-owned I/O buffer for byte payloads crossing the ABI.
 /// Double-call protocol: pass a buffer; if too small the op returns

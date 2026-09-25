@@ -16,7 +16,7 @@ use autocipher_bridge as _;
 
 /// ABI version, kept in step with `autocipher-ffi::ABI_MAJOR` / `ABI_MINOR`.
 pub const ABI_MAJOR: i32 = 1;
-pub const ABI_MINOR: i32 = 1;
+pub const ABI_MINOR: i32 = 2;
 
 /// All `#[ac_fn]` definitions, sorted by symbol.
 pub fn fn_specs() -> Vec<&'static FnSpec> {

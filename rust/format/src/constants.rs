@@ -6,8 +6,20 @@ use autocipher_core::kdf::KdfParams;
 /// Four-byte magic identifying an `.ac` container.
 pub const MAGIC: &[u8; 4] = b"ACPH";
 
-/// Current on-disk format version.
+/// Current container/header format version.
+///
+/// The fixed-size header layout is unchanged by per-file metadata, so the
+/// container version remains 1. The manifest has its own version below.
 pub const VERSION: u16 = 1;
+
+/// Current sealed-manifest format version.
+///
+/// Version 2 adds optional per-file creation/modification timestamps. Version
+/// 1 manifests remain readable and expose zero (unknown) timestamps.
+pub const MANIFEST_VERSION: u16 = 2;
+
+/// The legacy manifest version without per-file timestamps.
+pub const LEGACY_MANIFEST_VERSION: u16 = 1;
 
 /// Total size of each header slot in bytes (8 KiB).
 pub const HEADER_SIZE: usize = 8192;

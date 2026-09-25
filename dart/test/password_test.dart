@@ -12,14 +12,14 @@ final _libOverride = Platform.environment['AUTOCIPHER_FFI_LIB'];
 bool _isSkipped() => _libOverride == null || !File(_libOverride!).existsSync();
 
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     if (_isSkipped()) {
       markTestSkipped(
         'No native library configured; set AUTOCIPHER_FFI_LIB to the built '
         'autocipher_ffi.dll (release) to run the live password test.',
       );
     } else {
-      ensureAbiCompatible();
+      await ensureAbiCompatible();
     }
   });
 

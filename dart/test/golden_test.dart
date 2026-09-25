@@ -38,15 +38,27 @@ void main() {
   test('file_list golden bytes', () {
     final l = FileInfoList(
       files: [
-        FileInfo(name: 'photos/DSC0001.jpg', size: Int64(1048576)),
-        FileInfo(name: 'doc.txt', size: Int64(42)),
+        FileInfo(
+          name: 'photos/DSC0001.jpg',
+          size: Int64(1048576),
+          createdAt: Int64(10),
+          modifiedAt: Int64(20),
+          storageUsed: Int64(30),
+        ),
+        FileInfo(
+          name: 'doc.txt',
+          size: Int64(42),
+          createdAt: Int64(40),
+          modifiedAt: Int64(50),
+          storageUsed: Int64(60),
+        ),
       ],
     );
     expect(
       hex(l.writeToBuffer()),
-      '0a180a1270686f746f732f445343303030312e6a7067'
-      '10808040'
-      '0a0b0a07646f632e747874102a',
+      '0a1e0a1270686f746f732f445343303030312e6a7067'
+      '10808040180a2014281e'
+      '0a110a07646f632e747874102a18282032283c',
     );
   });
 
@@ -61,5 +73,22 @@ void main() {
     expect(back.items.length, 2);
     expect(back.items.first.src, 'a.txt');
     expect(back.items.last.storedName, 'c.txt');
+
+    final files = FileInfoList.fromBuffer(
+      FileInfoList(
+        files: [
+          FileInfo(
+            name: 'a.txt',
+            size: Int64(1),
+            createdAt: Int64(10),
+            modifiedAt: Int64(20),
+            storageUsed: Int64(30),
+          ),
+        ],
+      ).writeToBuffer(),
+    );
+    expect(files.files.single.createdAt, Int64(10));
+    expect(files.files.single.modifiedAt, Int64(20));
+    expect(files.files.single.storageUsed, Int64(30));
   });
 }

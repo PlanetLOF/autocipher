@@ -105,10 +105,16 @@ class FileInfo extends $pb.GeneratedMessage {
   factory FileInfo({
     $core.String? name,
     $fixnum.Int64? size,
+    $fixnum.Int64? createdAt,
+    $fixnum.Int64? modifiedAt,
+    $fixnum.Int64? storageUsed,
   }) {
     final result = FileInfo._();
     if (name != null) result.name = name;
     if (size != null) result.size = size;
+    if (createdAt != null) result.createdAt = createdAt;
+    if (modifiedAt != null) result.modifiedAt = modifiedAt;
+    if (storageUsed != null) result.storageUsed = storageUsed;
     return result;
   }
 
@@ -127,6 +133,15 @@ class FileInfo extends $pb.GeneratedMessage {
       createEmptyInstance: FileInfo.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'name')
     ..a<$fixnum.Int64>(2, _omitFieldNames ? '' : 'size', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        3, _omitFieldNames ? '' : 'createdAt', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        4, _omitFieldNames ? '' : 'modifiedAt', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        5, _omitFieldNames ? '' : 'storageUsed', $pb.PbFieldType.OU6,
         defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false;
 
@@ -167,6 +182,37 @@ class FileInfo extends $pb.GeneratedMessage {
   $core.bool hasSize() => $_has(1);
   @$pb.TagNumber(2)
   void clearSize() => $_clearField(2);
+
+  /// Vault-operation Unix timestamps in seconds; zero means unknown. These do
+  /// not mirror source-filesystem timestamps.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get createdAt => $_getI64(2);
+  @$pb.TagNumber(3)
+  set createdAt($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCreatedAt() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCreatedAt() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get modifiedAt => $_getI64(3);
+  @$pb.TagNumber(4)
+  set modifiedAt($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasModifiedAt() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearModifiedAt() => $_clearField(4);
+
+  /// Sum of encrypted chunk lengths referenced by this file. This is logical
+  /// storage accounting and can survive structural recovery of metadata.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get storageUsed => $_getI64(4);
+  @$pb.TagNumber(5)
+  set storageUsed($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStorageUsed() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStorageUsed() => $_clearField(5);
 }
 
 class PathItem extends $pb.GeneratedMessage {
