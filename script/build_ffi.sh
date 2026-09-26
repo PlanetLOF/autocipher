@@ -3,9 +3,7 @@
 # dart/lib/src/native/<os>/, where the autocipher_dart loader finds it.
 # Requires cargo on PATH.
 #
-# Usage:
-#   script/build_ffi.sh            # release
-#   script/build_ffi.sh dev        # debug profile
+# Usage: script/build_ffi.sh [dev|release]   # default: release
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,11 +19,6 @@ case "$(uname -s)" in
 esac
 
 src_path="$root/target/$profile_dir/$src"
-if [ ! -f "$src_path" ]; then
-  echo "native library not found at $src_path (build failed?)" >&2
-  exit 1
-fi
-
 dst_dir="$root/dart/lib/src/native/$os"
 mkdir -p "$dst_dir"
 cp "$src_path" "$dst_dir/$src"

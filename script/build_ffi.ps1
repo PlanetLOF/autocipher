@@ -26,11 +26,6 @@ $os = if ($IsWindows) { "win" } elseif ($IsLinux) { "linux" } else { "macos" }
 $name = if ($IsWindows) { "autocipher_ffi.dll" } elseif ($IsLinux) { "libautocipher_ffi.so" } else { "libautocipher_ffi.dylib" }
 
 $src = Join-Path $root "target" $profileDir $name
-if (-not (Test-Path $src)) {
-    Write-Error "native library not found at $src (build failed?)"
-    exit 1
-}
-
 $dstDir = Join-Path $natives $os
 New-Item -ItemType Directory -Force -Path $dstDir | Out-Null
 Copy-Item -LiteralPath $src -Destination (Join-Path $dstDir $name) -Force

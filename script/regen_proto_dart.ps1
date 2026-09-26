@@ -35,16 +35,11 @@ if (-not $protoc) {
 }
 
 # --- plugin -----------------------------------------------------------------
-$plugin = $null
-if (Get-Command protoc-gen-dart -ErrorAction SilentlyContinue) {
-    $plugin = (Get-Command protoc-gen-dart).Source
-} else {
-    $candidate = Join-Path $env:LOCALAPPDATA "Pub\Cache\bin\protoc-gen-dart.bat"
-    if (Test-Path -LiteralPath $candidate) {
-        $plugin = $candidate
-    }
-}
+$plugin = (Get-Command protoc-gen-dart -ErrorAction SilentlyContinue).Source
 if (-not $plugin) {
+    $plugin = Join-Path $env:LOCALAPPDATA "Pub\Cache\bin\protoc-gen-dart.bat"
+}
+if (-not $plugin -or -not (Test-Path -LiteralPath $plugin)) {
     Write-Error "protoc-gen-dart not found. Run `dart pub global activate protoc_plugin`, or add its bin dir to PATH."
     exit 1
 }
