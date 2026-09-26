@@ -15,6 +15,16 @@ dev_dependencies:
   lints: ^5.0.0
   test: ^1.25.0
 
-flutter:
-  assets:
-    - lib/src/native/
+# No `flutter:` section on purpose. A pure-Dart package cannot reliably ship a
+# native library to a Flutter app: directory asset globs are not recursive, so
+# `lib/src/native/<os>/<file>` would be silently dropped from the bundle, and
+# listing the exact file per platform makes the pubspec unbuildable on every
+# other OS (an absent file is a hard error, which breaks builds for everyone
+# but the platform the line was written for).
+#
+# Consuming apps stage the built engine with their own native build instead —
+# acui installs it into the bundle's lib/ (linux/CMakeLists.txt,
+# windows/CMakeLists.txt) or Frameworks/ (macos Xcode phase), where the loader
+# in lib/src/native/library.dart picks it up via its plain-name lookup.
+#
+# Run `just build-ffi` first; it stages the library into lib/src/native/<os>/.
